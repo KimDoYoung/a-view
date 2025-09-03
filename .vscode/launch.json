@@ -20,7 +20,7 @@
             "request": "launch",
             "module": "uvicorn",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}",
+                "PYTHONPATH": "${workspaceFolder}/app",
                 "A_VIEW_MODE": "local"
             },
             "args": [

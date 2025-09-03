@@ -9,10 +9,12 @@ import redis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from logger import get_logger
 from config import settings
-from endpoints import aview_routes, cache_routes
+
+from endpoints.aview_routes import router as aview_router
+from endpoints.cache_routes import router as cache_router
+
 from utils import (
     check_libreoffice,
     cleanup_old_cache_files
@@ -35,18 +37,12 @@ def add_statics(app: FastAPI):
     # 디렉토리 설정
     BASE_DIR = Path(__file__).parent
     STATIC_DIR = BASE_DIR / "static"
-    TEMPLATES_DIR = BASE_DIR / "templates"
-
-
     # 정적 파일 마운트
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-    # Jinja2 템플릿 설정
-    templates = Jinja2Templates(directory=TEMPLATES_DIR)
-
 def add_routes(app: FastAPI):
-    app.include_router(aview_routes, prefix="/aview", tags=["aview"])
-    app.include_router(cache_routes, prefix="/cache", tags=["cache"])
+    app.include_router(aview_router, prefix="/aview", tags=["aview"])
+    app.include_router(cache_router, prefix="/cache", tags=["cache"])
 
 def add_events(app: FastAPI):
     app.add_event_handler("startup", startup_event)
@@ -70,7 +66,7 @@ def startup_event():
             redis_client.ping()
             logger.info("📦 Redis 연결: ✅ OK")
         except Exception as e:
-            logger.error(f"📦 Redis 연결 실패: {e}")
+            logger.error(f"❌ Redis 연결 실패: {e}")
     else:
         logger.warning("📦 Redis: ❌ 비활성화")
 
