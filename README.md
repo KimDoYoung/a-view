@@ -15,7 +15,14 @@
 ## 방식
 
 - AssetERP에서 ifram 으로 **http://g-view-host:8003/view?url=https://.../abc.xlsx** 호출
-
+- 사용방법
+```text
+a-view는 assertERP 시스템에서 호출한다. 즉 AssetERP에서   localhost:8003/aview?url=https://asserterp-host/files/a.xlsx와 같이 호출한다. 그러면 localhost:8003(a-view)에서 그 파일을 다운로드해서 libre를 이용하여 변환한 후에 보여줘야한다. 이것을 테스트하기 위해서 나는 AssetERP(자바베이스의 web application)을 대신하는 web-application을 만들 필요가 있는가? 아니면 그냥 a-view로 그것을 갈음하여 테스트 가능한가?
+```
+- static/files/AssetERP에 파일 1.xlsx를 올려놓고 
+```text
+http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xlsx
+```
 ## redis
 
 - docker에서 실행

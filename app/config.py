@@ -48,7 +48,7 @@ class Config:
         self.ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')
         self.ALLOWED_FILE_TYPES = os.getenv(
             'ALLOWED_FILE_TYPES', 
-            '.doc,.docx,.odt,.rtf,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,.pdf'
+            '.doc,.docx,.odt,.rtf,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,.pdf,.png,.jpg'
         ).split(',')
         
         # 로그 설정

@@ -18,6 +18,8 @@ logs/
 .env.local
 .env.real
 
+app/static/files/
+app/static/images/
 # 개발용 .env는 포함 (템플릿용)
 # .env
 # .env.development
