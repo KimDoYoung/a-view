@@ -6,8 +6,8 @@ from fastapi.responses import HTMLResponse, FileResponse
 from utils import (
     check_libreoffice,
     get_cached_pdf,
-    CONVERTED_DIR,
 )
+from config import settings
 
 router = APIRouter()
 
@@ -21,30 +21,7 @@ def _get_templates(request: Request):
     # main.py에서 app.state.templates에 넣어둔 인스턴스를 꺼내씀
     return request.app.state.templates
 
-
 @router.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    """메인 페이지 - 서비스 상태 및 테스트 UI"""
-    templates = _get_templates(request)
-    libre_status = check_libreoffice()
-
-    # Redis 연결 상태 확인
-    redis_client = _get_redis(request)
-    try:
-        redis_status = bool(redis_client.ping()) if redis_client else False
-    except Exception:
-        redis_status = False
-
-    context = {
-        "request": request,
-        "title": "A-View Document Processor",
-        "libre_status": libre_status,
-        "redis_status": redis_status,
-    }
-    return templates.TemplateResponse("index.html", context)
-
-
-@router.get("/aview", response_class=HTMLResponse)
 async def view_document(
     request: Request,
     url: str = Query(..., description="변환할 문서의 URL"),
@@ -56,7 +33,7 @@ async def view_document(
     redis_client = _get_redis(request)
     try:
         # URL에서 파일 다운로드 및 PDF 변환 (캐시 포함)
-        pdf_path, original_filename = await get_cached_pdf(url, redis_client)
+        pdf_path, original_filename = await get_cached_pdf(url, redis_client, settings)
 
         if mode == "download":
             # 다운로드 모드: PDF 파일 직접 반환
@@ -68,7 +45,7 @@ async def view_document(
 
         # 임베드 모드: PDF 뷰어 HTML 반환
         templates = _get_templates(request)
-        pdf_url = f"/pdf/{pdf_path.name}"
+        pdf_url = f"/aview/pdf/{pdf_path.name}"
         context = {
             "request": request,
             "title": f"문서 뷰어 - {original_filename}",
@@ -86,7 +63,7 @@ async def view_document(
 @router.get("/pdf/{filename}")
 async def serve_pdf(filename: str):
     """변환된 PDF 파일 서빙"""
-    pdf_path = CONVERTED_DIR / filename
+    pdf_path = Path(settings.CONVERTED_DIR) / filename
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="PDF 파일을 찾을 수 없습니다")
 
@@ -97,7 +74,7 @@ async def serve_pdf(filename: str):
     )
 
 
-@router.get("/api/health")
+@router.get("/health")
 async def health_check(request: Request):
     """시스템 상태 확인"""
     redis_client = _get_redis(request)

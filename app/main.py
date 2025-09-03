@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from logger import get_logger
 from config import settings
 
+from endpoints.home_routes import router as home_router
 from endpoints.aview_routes import router as aview_router
 from endpoints.cache_routes import router as cache_router
 
@@ -41,15 +42,21 @@ def add_statics(app: FastAPI):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 def add_routes(app: FastAPI):
+    app.include_router(home_router)
     app.include_router(aview_router, prefix="/aview", tags=["aview"])
     app.include_router(cache_router, prefix="/cache", tags=["cache"])
 
 def add_events(app: FastAPI):
-    app.add_event_handler("startup", startup_event)
+    app.add_event_handler("startup", lambda: startup_event(app))
     app.add_event_handler("shutdown", shutdown_event)
 
-def startup_event():
+def startup_event(app: FastAPI):
     """애플리케이션 시작 시 초기화 작업"""
+    # 디렉토리 생성
+    Path(settings.CACHE_DIR).mkdir(parents=True, exist_ok=True)
+    Path(settings.CONVERTED_DIR).mkdir(parents=True, exist_ok=True)
+    Path(settings.LOG_DIR).mkdir(parents=True, exist_ok=True)
+    
     # Redis 연결 설정
     redis_client = redis.Redis(
         host=settings.REDIS_HOST,
@@ -57,9 +64,20 @@ def startup_event():
         db=settings.REDIS_DB,
         decode_responses=True
     )
+    
+    # 템플릿 설정
+    from fastapi.templating import Jinja2Templates
+    BASE_DIR = Path(__file__).parent
+    TEMPLATE_DIR = BASE_DIR / "templates"
+    templates = Jinja2Templates(directory=TEMPLATE_DIR)
+    
+    # App state에 저장
+    app.state.redis = redis_client
+    app.state.templates = templates
+    
     logger.info(f"🚀 {settings.APP_NAME} v{settings.VERSION} 시작")
     logger.info(f"📁 캐시 디렉토리: {settings.CACHE_DIR}")
-    logger.info(f"🔧 LibreOffice 상태: {'✅ OK' if check_libreoffice() else '❌ ERROR'}")
+    logger.info(f"🔧 LibreOffice 상태: {'✅ OK' if check_libreoffice()[0] else '❌ ERROR'}")
     
     if redis_client:
         try:

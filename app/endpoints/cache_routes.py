@@ -1,11 +1,11 @@
-# aview_routes.py
+# cache_routes.py
+from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException, Query
 
 from utils import (
     cleanup_old_cache_files,
-    CACHE_DIR,
-    CONVERTED_DIR,
 )
+from config import settings
 
 router = APIRouter()
 
@@ -20,7 +20,7 @@ def _get_templates(request: Request):
     return request.app.state.templates
 
 
-@router.post("/api/cache/cleanup")
+@router.post("/cleanup")
 async def cleanup_cache(max_age_hours: int = Query(24, description="삭제할 파일의 최대 나이(시간)")):
     """캐시 파일 정리"""
     try:
@@ -30,12 +30,15 @@ async def cleanup_cache(max_age_hours: int = Query(24, description="삭제할 �
         raise HTTPException(status_code=500, detail=f"캐시 정리 실패: {str(e)}")
 
 
-@router.get("/api/cache/stats")
+@router.get("/stats")
 async def cache_stats():
     """캐시 통계 정보"""
     try:
-        cache_files = list(CACHE_DIR.glob("*"))
-        converted_files = list(CONVERTED_DIR.glob("*.pdf"))
+        cache_dir = Path(settings.CACHE_DIR)
+        converted_dir = Path(settings.CONVERTED_DIR)
+        
+        cache_files = list(cache_dir.glob("*"))
+        converted_files = list(converted_dir.glob("*.pdf"))
 
         cache_size = sum(f.stat().st_size for f in cache_files if f.is_file())
         converted_size = sum(f.stat().st_size for f in converted_files if f.is_file())

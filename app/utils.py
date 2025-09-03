@@ -6,6 +6,8 @@ A-View 유틸리티 함수들
 """
 
 import hashlib
+import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Optional, Tuple
@@ -15,6 +17,8 @@ import httpx
 import redis
 from fastapi import HTTPException
 
+from app.config import Config
+
 # LibreOffice 지원 확장자 및 MIME 타입
 SUPPORTED_EXTENSIONS = {
     '.doc', '.docx', '.odt', '.rtf',  # 문서
@@ -23,38 +27,52 @@ SUPPORTED_EXTENSIONS = {
     '.pdf'                            # PDF (이미 변환된 파일)
 }
 
-OFFICE_MIME_TYPES = {
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel', 
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/pdf',
-    'text/csv'
-}
+def find_soffice() -> Optional[Path]:
+    """
+    LibreOffice CLI 실행 파일을 찾는다.
+    - Windows: soffice.com(우선) → soffice.exe
+    - Linux/macOS: libreoffice → soffice
+    - 환경변수/기본 설치 경로도 시도
+    """
+    if os.name == "nt":
+        # 일반적인 설치 경로 시도
+        candidates = [
+            Path(r"C:\Program Files\LibreOffice\program\soffice.com"),
+            Path(r"C:\Program Files\LibreOffice\program\soffice.exe"),
+            Path(r"C:\Program Files (x86)\LibreOffice\program\soffice.com"),
+            Path(r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"),
+        ]
+        for cand in candidates:
+            if cand.exists():
+                return cand
 
-# 캐시 디렉토리 설정
-CACHE_DIR = Path("/tmp/aview_cache")
-CONVERTED_DIR = CACHE_DIR / "converted"
+        return None
+    else:
+        # Unix 계열
+        for name in ("libreoffice", "soffice"):
+            p = shutil.which(name)
+            if p:
+                return Path(p)
+        return None
 
-def init_cache_directories():
-    """캐시 디렉토리 초기화"""
-    CACHE_DIR.mkdir(exist_ok=True)
-    CONVERTED_DIR.mkdir(exist_ok=True)
+def check_libreoffice() -> Tuple[bool, str]:
+    """
+    LibreOffice(soffice) 사용 가능 여부를 확인하고 버전 문자열을 반환.
+    Returns: (ok, message)
+    """
+    exe = find_soffice()
+    if not exe:
+        return False, "LibreOffice(soffice) 실행 파일을 찾지 못했습니다. (PATH 추가 또는 설치 경로 확인)"
 
-def check_libreoffice() -> bool:
-    """LibreOffice 설치 및 실행 가능 여부 확인"""
+    cmd = [str(exe), "--version"]
     try:
-        result = subprocess.run(
-            ["libreoffice", "--version"], 
-            capture_output=True, 
-            text=True, 
-            timeout=5
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
+        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10).strip()
+        # 일반적으로 "LibreOffice 24.x.x.x ..." 형태로 나옵니다.
+        return True, out
+    except subprocess.CalledProcessError as e:
+        return False, f"soffice 호출 실패: {e.output.strip() if e.output else e}"
+    except Exception as e:
+        return False, f"soffice 버전 확인 중 오류: {e}"
 
 def generate_cache_key(url: str) -> str:
     """URL을 기반으로 캐시 키 생성"""
@@ -107,11 +125,12 @@ def validate_file_extension(filename: str) -> str:
         )
     return file_ext
 
-async def download_and_cache_file(url: str, redis_client: redis.Redis) -> Tuple[Path, str]:
+async def download_and_cache_file(url: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str]:
     """
     외부 URL에서 파일을 다운로드하고 캐시에 저장
     Returns: (파일 경로, 원본 파일명)
     """
+    CACHE_DIR = Path(settings.CACHE_DIR)
     cache_key = generate_cache_key(url)
     
     # Redis에서 캐시된 파일 정보 확인
@@ -145,7 +164,7 @@ async def download_and_cache_file(url: str, redis_client: redis.Redis) -> Tuple[
     
     return cache_file_path, filename
 
-def convert_to_pdf(input_path: Path) -> Path:
+def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
     """
     LibreOffice를 사용해 파일을 PDF로 변환
     Returns: 변환된 PDF 파일 경로
@@ -162,9 +181,17 @@ def convert_to_pdf(input_path: Path) -> Path:
     if pdf_path.exists():
         return pdf_path
     
+    # LibreOffice 실행 파일 찾기
+    soffice_exe = find_soffice()
+    if not soffice_exe:
+        raise HTTPException(
+            status_code=500,
+            detail="LibreOffice 실행 파일을 찾을 수 없습니다"
+        )
+    
     # LibreOffice 변환 명령
     cmd = [
-        "libreoffice",
+        str(soffice_exe),
         "--headless",
         "--convert-to", "pdf",
         "--outdir", str(CONVERTED_DIR),
@@ -199,26 +226,29 @@ def convert_to_pdf(input_path: Path) -> Path:
             detail=f"문서 변환 중 오류 발생: {str(e)}"
         )
 
-async def get_cached_pdf(url: str, redis_client: redis.Redis) -> Tuple[Path, str]:
+async def get_cached_pdf(url: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str]:
     """
     URL에서 파일을 다운로드하고 PDF로 변환하여 반환
     Returns: (PDF 파일 경로, 원본 파일명)
     """
     # 파일 다운로드 및 캐시
-    file_path, original_filename = await download_and_cache_file(url, redis_client)
+    file_path, original_filename = await download_and_cache_file(url, redis_client, settings)
     
     # PDF로 변환
-    pdf_path = convert_to_pdf(file_path)
+    converted_dir = Path(settings.CONVERTED_DIR)
+    pdf_path = convert_to_pdf(file_path, converted_dir)
     
     return pdf_path, original_filename
 
 def cleanup_old_cache_files(max_age_hours: int = 24):
     """오래된 캐시 파일 정리"""
+    from app.config import settings
     import time
     current_time = time.time()
     max_age_seconds = max_age_hours * 3600
     
-    for cache_file in CACHE_DIR.rglob("*"):
+    cache_dir = Path(settings.CACHE_DIR)
+    for cache_file in cache_dir.rglob("*"):
         if cache_file.is_file():
             file_age = current_time - cache_file.stat().st_mtime
             if file_age > max_age_seconds:

@@ -15,3 +15,14 @@
 ## 방식
 
 - AssetERP에서 ifram 으로 **http://g-view-host:8003/view?url=https://.../abc.xlsx** 호출
+
+## redis
+
+- docker에서 실행
+  ```bash
+  docker ps
+  docker stop redis-aview
+  docker run =d --name redis-aview -p 6379:6379 redis:latest
+  docekr rm redis-aview
+  docker run -d --name redis-aview -p 6379:6379 redis:latest
+  ```
