@@ -3,7 +3,6 @@ A-View: LibreOffice 기반 문서 뷰어 서비스
 AssetERP의 문서 뷰어로 사용되며, 외부 URL의 Office 문서를 PDF로 변환하여 표시
 """
 
-import os
 from pathlib import Path
 
 import redis
@@ -13,44 +12,55 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from logger import get_logger
 from config import settings
-logger = get_logger(__name__)
-
-
+from endpoints import aview_routes, cache_routes
 from utils import (
     check_libreoffice,
     cleanup_old_cache_files
 )
 
-# FastAPI 앱 초기화
-app = FastAPI(
-    title="A-View Document Processor",
-    description="LibreOffice 기반 문서 처리 및 뷰어 서비스",
-    version="1.0.0"
-)
+logger = get_logger(__name__)
 
-# 디렉토리 설정
-BASE_DIR = Path(__file__).parent
-STATIC_DIR = BASE_DIR / "static"
-TEMPLATES_DIR = BASE_DIR / "templates"
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="A-View Document Processor",
+        description="Document viewer for AssetERP",
+        version=settings.VERSION,
+    )
+    add_routes(app)
+    add_statics(app)
+    add_events(app)
+    return app
+
+def add_statics(app: FastAPI):  
+    # 디렉토리 설정
+    BASE_DIR = Path(__file__).parent
+    STATIC_DIR = BASE_DIR / "static"
+    TEMPLATES_DIR = BASE_DIR / "templates"
 
 
-# 정적 파일 마운트
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    # 정적 파일 마운트
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Jinja2 템플릿 설정
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
+    # Jinja2 템플릿 설정
+    templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Redis 연결 설정
-redis_client = redis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    db=int(os.getenv("REDIS_DB", 0)),
-    decode_responses=True
-)
+def add_routes(app: FastAPI):
+    app.include_router(aview_routes, prefix="/aview", tags=["aview"])
+    app.include_router(cache_routes, prefix="/cache", tags=["cache"])
 
-@app.on_event("startup")
-async def startup_event():
+def add_events(app: FastAPI):
+    app.add_event_handler("startup", startup_event)
+    app.add_event_handler("shutdown", shutdown_event)
+
+def startup_event():
     """애플리케이션 시작 시 초기화 작업"""
+    # Redis 연결 설정
+    redis_client = redis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        decode_responses=True
+    )
     logger.info(f"🚀 {settings.APP_NAME} v{settings.VERSION} 시작")
     logger.info(f"📁 캐시 디렉토리: {settings.CACHE_DIR}")
     logger.info(f"🔧 LibreOffice 상태: {'✅ OK' if check_libreoffice() else '❌ ERROR'}")
@@ -64,8 +74,7 @@ async def startup_event():
     else:
         logger.warning("📦 Redis: ❌ 비활성화")
 
-@app.on_event("shutdown")
-async def shutdown_event():
+def shutdown_event():
     """애플리케이션 종료 시 정리 작업"""
     logger.info(f"🛑 {settings.APP_NAME} 종료")
     try:
@@ -74,9 +83,12 @@ async def shutdown_event():
     except Exception as e:
         logger.error(f"캐시 정리 실패: {e}")
 
+app = create_app()
+
 if __name__ == "__main__":
+    logger.info("Document Viewer for AssetERP")
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
         port=8003,
         reload=True

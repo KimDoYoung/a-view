@@ -21,13 +21,13 @@
             "module": "uvicorn",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}",
-                "KIWI7_MODE": "local"
+                "A_VIEW_MODE": "local"
             },
             "args": [
-                "backend.main:app",
+                "main:app",
                 "--reload",
                 "--port",
-                "8001" // 원하는 포트 번호로 변경
+                "8003" // 원하는 포트 번호로 변경
             ],
             "jinja": true,
             "justMyCode": true,
