@@ -116,4 +116,4 @@ class Config:
 
 
 # 전역 설정 인스턴스
-config = Config()
+settings = Config()
