@@ -127,10 +127,10 @@
                     <div class="card-body">
                         <h6 class="card-title">API 테스트</h6>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-sm btn-outline-primary" x-on:click="testHealth()">
+                            <button class="btn btn-sm btn-outline-primary" x-on:click="healthCheck()">
                                 Health Check
                             </button>
-                            <button class="btn btn-sm btn-outline-info" x-on:click="testCache()">
+                            <button class="btn btn-sm btn-outline-info" x-on:click="statsCache()">
                                 Cache Stats
                             </button>
                             <button class="btn btn-sm btn-outline-warning" x-on:click="cleanupCache()">
@@ -144,8 +144,9 @@
     </div>
 
     <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('app', () => ({
+        // Alpine.js 컴포넌트 함수 정의
+        function createAppComponent() {
+            return {
                 converting: false,
                 result: null,
                 testUrl: '',
@@ -217,34 +218,112 @@
                     }
                 },
                 
-                testHealth() {
-                    fetch('/cache/health')
+                healthCheck() {
+                    fetch('/aview/health')
                         .then(response => response.json())
                         .then(data => {
-                            alert('Health Check: ' + JSON.stringify(data, null, 2));
+                            if (data.status === 'healthy') {
+                                this.result = {
+                                    status: 'success',
+                                    message: '시스템 정상 상태입니다.\n' + JSON.stringify(data, null, 2)
+                                };
+                            } else {
+                                this.result = {
+                                    status: 'error',
+                                    message: '시스템 오류 상태입니다.\n' + JSON.stringify(data, null, 2)
+                                };
+                            }
+                        })
+                        .catch(error => {
+                            this.result = {
+                                status: 'error',
+                                message: 'Health Check 요청 실패: ' + error.message
+                            };
                         });
                 },
                 
-                testCache() {
-                    const key = 'test_' + Date.now();
-                    fetch(`/api/cache/${key}`, {
+                statsCache() {
+                    fetch(`/cache/stats`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // 사용자 친화적인 메시지로 표시
+                        const message = `
+캐시 통계 정보=>
+원본 캐시 파일: ${data.cache.files}개 (${data.cache.size_mb}MB), 
+변환된 PDF 파일: ${data.converted.files}개 (${data.converted.size_mb}MB), 
+전체 사용량: ${data.total_size_mb}MB
+                        `.trim();
+                        
+                        this.result = {
+                            status: 'success',
+                            message: message
+                        };
+                    })
+                    .catch(error => {
+                        console.error('Cache stats error:', error);
+                        this.result = {
+                            status: 'error',
+                            message: '캐시 통계 조회 중 오류가 발생했습니다: ' + error.message
+                        };
+                    });
+                },
+                cleanupCache() {
+                    if (!confirm('캐시 파일을 정리하시겠습니까? (24시간 이상된 파일들이 삭제됩니다)')) {
+                        return;
+                    }
+
+                    fetch('/cache/cleanup', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            value: 'Hello Redis!',
-                            expiry: 300
-                        })
+                        }
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
-                        alert('Cache Test: ' + JSON.stringify(data, null, 2));
+                        if (data.status === 'success') {
+                            this.result = {
+                                status: 'success',
+                                message: data.message
+                            };
+                        } else {
+                            this.result = {
+                                status: 'error',
+                                message: data.message || '캐시 정리 중 오류가 발생했습니다.'
+                            };
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Cache cleanup error:', error);
+                        this.result = {
+                            status: 'error',
+                            message: '캐시 정리 중 오류가 발생했습니다: ' + error.message
+                        };
                     });
                 }
-            }));
+            };
+        }
+
+        // Alpine.js 초기화
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('app', createAppComponent);
         });
         
+
         // 파일 선택 처리 (요소가 존재하는 경우만)
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {

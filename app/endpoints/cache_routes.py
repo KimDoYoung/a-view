@@ -22,7 +22,7 @@ def _get_templates(request: Request):
 
 @router.post("/cleanup")
 async def cleanup_cache(max_age_hours: int = Query(24, description="삭제할 파일의 최대 나이(시간)")):
-    """캐시 파일 정리"""
+    """캐시 파일 정리, setting.CACHE_DIR 안의 파일들을 삭제함"""
     try:
         cleanup_old_cache_files(max_age_hours)
         return {"status": "success", "message": f"{max_age_hours}시간 이상된 캐시 파일을 정리했습니다"}

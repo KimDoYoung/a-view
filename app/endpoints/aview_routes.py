@@ -83,12 +83,15 @@ async def health_check(request: Request):
     except Exception:
         redis_ping = False
 
+    libre_ok, _ = check_libreoffice()
+    is_healthy = libre_ok and redis_ping
+
     return {
-        "status": "healthy",
+        "status": "healthy" if is_healthy else "unhealthy",
         "services": {
-            "libreoffice": check_libreoffice(),
+            "libreoffice": libre_ok,
             "redis": redis_ping,
         },
-        "version": "1.0.0",
-        "cache_dir": "/tmp/aview_cache",
+        "version": settings.VERSION,
+        "cache_dir": settings.CACHE_DIR,
     }
