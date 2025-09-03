@@ -52,20 +52,28 @@ redis_client = redis.Redis(
 @app.on_event("startup")
 async def startup_event():
     """애플리케이션 시작 시 초기화 작업"""
-    print("🚀 A-View 서비스 시작")
-    print(f"📁 캐시 디렉토리: /tmp/aview_cache")
-    print(f"🔧 LibreOffice 상태: {'✅ OK' if check_libreoffice() else '❌ ERROR'}")
-    try:
-        redis_client.ping()
-        print("📦 Redis 연결: ✅ OK")
-    except Exception:
-        print("📦 Redis 연결: ❌ ERROR")
+    app_logger.info(f"🚀 {settings.app_name} v{settings.app_version} 시작")
+    app_logger.info(f"📁 캐시 디렉토리: {settings.cache_dir}")
+    app_logger.info(f"🔧 LibreOffice 상태: {'✅ OK' if check_libreoffice() else '❌ ERROR'}")
+    
+    if redis_client:
+        try:
+            redis_client.ping()
+            app_logger.info("📦 Redis 연결: ✅ OK")
+        except Exception as e:
+            app_logger.error(f"📦 Redis 연결 실패: {e}")
+    else:
+        app_logger.warning("📦 Redis: ❌ 비활성화")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """애플리케이션 종료 시 정리 작업"""
-    print("🛑 A-View 서비스 종료")
-    cleanup_old_cache_files()
+    app_logger.info(f"🛑 {settings.app_name} 종료")
+    try:
+        cleanup_old_cache_files(24)
+        app_logger.info("캐시 정리 완료")
+    except Exception as e:
+        app_logger.error(f"캐시 정리 실패: {e}")
 
 # 홈 페이지
 @app.get("/", response_class=HTMLResponse)

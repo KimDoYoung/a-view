@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     """애플리케이션 설정"""
     
     # 환경 구분
-    environment: str = Field(default="development", env="A_VIEW_MODE")
+    environment: str = Field(default="development", env="ENVIRONMENT")
     
     # 애플리케이션 기본 설정
     app_name: str = Field(default="A-View Document Processor", env="APP_NAME")
@@ -72,55 +72,52 @@ class Settings(BaseSettings):
             return [ext.strip().lower() for ext in v.split(',') if ext.strip()]
         return v
     
-    class Config:
+    # Pydantic v2 설정
+    model_config = SettingsConfigDict(
+        env_file='.env',
+        env_file_encoding='utf-8',
+        case_sensitive=False,
+        extra='ignore'
+    )
+    
+    def model_post_init(self, __context) -> None:
+        """모델 초기화 후 처리"""
         # 환경별 .env 파일 로드
-        @classmethod
-        def customise_sources(cls, init_settings, env_settings, file_secret_settings):
-            return (
-                init_settings,
-                env_settings,
-                cls._env_file_settings,
-                file_secret_settings,
-            )
+        self._load_env_files()
+    
+    def _load_env_files(self) -> None:
+        """환경별 .env 파일 로드 (상속/오버라이드 구조)"""
+        from dotenv import dotenv_values
         
-        @staticmethod
-        def _env_file_settings(settings: BaseSettings) -> dict:
-            """환경별 .env 파일 로드 (상속/오버라이드 구조)"""
-            env_files = []
+        environment = os.getenv('ENVIRONMENT', 'development')
+        
+        # 환경별 .env 파일들 (우선순위 순 - 낮은 것부터)
+        base_files = [
+            '.env',                          # 기본값/공통 설정
+            '.env.local',                    # 로컬 공통 설정
+            f'.env.{environment}',           # 환경별 설정  
+            f'.env.{environment}.local'      # 환경별 로컬 설정 (최우선)
+        ]
+        
+        # 존재하는 파일들만 필터링
+        existing_files = [f for f in base_files if Path(f).exists()]
+        
+        if not existing_files:
+            return
+        
+        # 상속 구조로 설정 병합
+        print(f"🔧 환경: {environment}")
+        print(f"🔧 설정 파일 로딩 순서:")
+        for env_file in existing_files:
+            print(f"   📄 {env_file}")
             
-            # 환경 변수에서 ENVIRONMENT 확인
-            environment = os.getenv('ENVIRONMENT', 'development')
+            # dotenv로 파일 읽기
+            file_settings = dotenv_values(env_file)
             
-            # 환경별 .env 파일들 (우선순위 순 - 낮은 것부터)
-            base_files = [
-                '.env',                          # 기본값/공통 설정
-                '.env.local',                    # 로컬 공통 설정
-                f'.env.{environment}',           # 환경별 설정  
-                f'.env.{environment}.local'      # 환경별 로컬 설정 (최우선)
-            ]
-            
-            # 존재하는 파일들만 필터링
-            existing_files = [f for f in base_files if Path(f).exists()]
-            
-            if not existing_files:
-                return {}
-            
-            # 상속 구조로 설정 병합
-            merged_settings = {}
-            
-            print(f"🔧 로딩 순서 (기본값→오버라이드):")
-            for env_file in existing_files:
-                print(f"   📄 {env_file}")
-                
-                # dotenv로 파일 읽기
-                from dotenv import dotenv_values
-                file_settings = dotenv_values(env_file)
-                
-                # 기존 설정에 오버라이드
-                merged_settings.update(file_settings)
-            
-            print(f"🔧 최종 환경: {environment}")
-            return merged_settings
+            # 환경변수에 없는 것만 설정
+            for key, value in file_settings.items():
+                if key and value is not None and not os.getenv(key):
+                    os.environ[key] = str(value)
     
     @property
     def cache_path(self) -> Path:

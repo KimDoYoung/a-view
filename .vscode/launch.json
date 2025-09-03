@@ -15,29 +15,7 @@
             "env": {"PYTHONPATH": "${workspaceFolder}"}
         },
         {
-            "name": "ExResponse",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "cwd" : "${fileDirname}",
-            "justMyCode": false,
-            "env": {"PYTHONPATH": "${workspaceFolder}"},
-            "args": ["c:\\tmp\\kwapi.xlsx"]
-        },        
-        {
-            "name": "ExRequest",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "cwd" : "${fileDirname}",
-            "justMyCode": false,
-            "env": {"PYTHONPATH": "${workspaceFolder}"},
-            "args": ["c:\\tmp\\kwapi.xlsx"]
-        },
-        {
-            "name": "kiwi7",
+            "name": "aview",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
