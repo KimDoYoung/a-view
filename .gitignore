@@ -1,10 +1,48 @@
-# Python-generated files
+# Python
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
 
-# Virtual environments
-.venv
+# A-View 캐시 및 로그
+cache/
+cache_dev/
+logs/
+*.log
+
+# 환경 설정 파일들 (보안상 중요한 것들은 제외)
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# 개발용 .env는 포함 (템플릿용)
+# .env
+# .env.development
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Redis dump
+dump.rdb
+
+# 임시 파일
+tmp/
+temp/
+*.tmp
+
+# 변환된 문서들
+converted/
+*.pdf
