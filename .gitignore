@@ -16,9 +16,7 @@ logs/
 
 # 환경 설정 파일들 (보안상 중요한 것들은 제외)
 .env.local
-.env.*.local
-.env.production
-.env.staging
+.env.real
 
 # 개발용 .env는 포함 (템플릿용)
 # .env
