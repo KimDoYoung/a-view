@@ -1,24 +1,13 @@
 # cache_routes.py
 from pathlib import Path
-from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from utils import (
-    cleanup_old_cache_files,
+    cleanup_old_cache_files
 )
 from config import settings
 
 router = APIRouter()
-
-
-def _get_redis(request: Request):
-    # main.py에서 app.state.redis에 넣어둔 인스턴스를 꺼내씀
-    return getattr(request.app.state, "redis", None)
-
-
-def _get_templates(request: Request):
-    # main.py에서 app.state.templates에 넣어둔 인스턴스를 꺼내씀
-    return request.app.state.templates
-
 
 @router.post("/cleanup")
 async def cleanup_cache(max_age_hours: int = Query(24, description="삭제할 파일의 최대 나이(시간)")):

@@ -27,6 +27,12 @@ SUPPORTED_EXTENSIONS = {
     '.pdf'                            # PDF (이미 변환된 파일)
 }
 
+def get_redis(request):
+    return getattr(request.app.state, "redis", None)
+
+def get_templates(request):
+    return request.app.state.templates
+
 def find_soffice() -> Optional[Path]:
     """
     LibreOffice CLI 실행 파일을 찾는다.

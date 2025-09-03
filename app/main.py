@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="A-View Document Processor",
+        title="A-View Document Viewer for AssetERP",
         description="Document viewer for AssetERP",
         version=settings.VERSION,
     )

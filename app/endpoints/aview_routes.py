@@ -6,20 +6,22 @@ from fastapi.responses import HTMLResponse, FileResponse
 from utils import (
     check_libreoffice,
     get_cached_pdf,
+    get_redis,
+    get_templates
 )
 from config import settings
 
 router = APIRouter()
 
 
-def _get_redis(request: Request):
-    # main.py에서 app.state.redis에 넣어둔 인스턴스를 꺼내씀
-    return getattr(request.app.state, "redis", None)
+# def _get_redis(request: Request):
+#     # main.py에서 app.state.redis에 넣어둔 인스턴스를 꺼내씀
+#     return getattr(request.app.state, "redis", None)
 
 
-def _get_templates(request: Request):
-    # main.py에서 app.state.templates에 넣어둔 인스턴스를 꺼내씀
-    return request.app.state.templates
+# def _get_templates(request: Request):
+#     # main.py에서 app.state.templates에 넣어둔 인스턴스를 꺼내씀
+#     return request.app.state.templates
 
 @router.get("/", response_class=HTMLResponse)
 async def view_document(
@@ -30,7 +32,7 @@ async def view_document(
     """
     메인 문서 뷰어 엔드포인트
     """
-    redis_client = _get_redis(request)
+    redis_client = get_redis(request)
     try:
         # URL에서 파일 다운로드 및 PDF 변환 (캐시 포함)
         pdf_path, original_filename = await get_cached_pdf(url, redis_client, settings)
@@ -44,7 +46,7 @@ async def view_document(
             )
 
         # 임베드 모드: PDF 뷰어 HTML 반환
-        templates = _get_templates(request)
+        templates = get_templates(request)
         pdf_url = f"/aview/pdf/{pdf_path.name}"
         context = {
             "request": request,
@@ -77,7 +79,7 @@ async def serve_pdf(filename: str):
 @router.get("/health")
 async def health_check(request: Request):
     """시스템 상태 확인"""
-    redis_client = _get_redis(request)
+    redis_client = get_redis(request)
     try:
         redis_ping = bool(redis_client.ping()) if redis_client else False
     except Exception:
