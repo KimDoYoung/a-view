@@ -5,6 +5,8 @@ from typing import Optional, Self
 from pathlib import Path
 import os
 
+from app.utils import CONVERTABLE_EXTENSIONS
+
 class OutputFormat(str, Enum):
     """지원하는 출력 형식"""
     PDF = "pdf"
@@ -44,15 +46,20 @@ class ConvertParams(BaseModel):
             raise ValueError('URL은 http:// 또는 https://로 시작해야 합니다')
         
         # 지원하는 파일 확장자 체크 (선택사항)
-        supported_extensions = ['.doc', '.docx', '.pdf', '.odt', '.rtf', '.txt', '.hwp']
+        supported_extensions = CONVERTABLE_EXTENSIONS
         url_lower = v.lower()
-        
-        # 확장자가 있는 경우만 체크 (없으면 통과)
         if '.' in Path(v).suffix:
             if not any(url_lower.endswith(ext) for ext in supported_extensions):
                 raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
-        
         return v
+        # url_lower = v.lower()
+        
+        # # 확장자가 있는 경우만 체크 (없으면 통과)
+        # if '.' in Path(v).suffix:
+        #     if not any(url_lower.endswith(ext) for ext in supported_extensions):
+        #         raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
+        
+        # return v
     
     @field_validator('path')
     def validate_path(cls, v):

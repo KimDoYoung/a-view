@@ -29,6 +29,12 @@ SUPPORTED_EXTENSIONS = {
     '.md',
     '.html', '.htm'
 }
+# pdf나 html로 변환가능한 확장자
+CONVERTABLE_EXTENSIONS =  {
+    '.doc', '.docx', '.odt', '.rtf',
+    '.xls', '.xlsx', '.ods', '.csv',
+    '.ppt', '.pptx', '.odp'
+}
 
 def get_redis(request):
     return getattr(request.app.state, "redis", None)
