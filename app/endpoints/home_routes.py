@@ -1,8 +1,9 @@
 
 
 from fastapi import APIRouter, Request, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from typing import Optional
+from pathlib import Path
 
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat
 from app.utils import check_libreoffice, local_file_copy_and_convert, url_download_and_convert
@@ -203,3 +204,51 @@ async def view_document(
             "output_format": output.value if output else "html"
         }
         return templates.TemplateResponse("view_error.html", context)
+
+
+#-----------------------------------------------------
+# 파일 다운로드 API : download (GET)
+#-----------------------------------------------------
+@router.get("/download")
+async def download_file(
+    request: Request,
+    file_path: str = Query(..., description="다운로드할 파일의 서버 경로"),
+    filename: Optional[str] = Query(None, description="다운로드 파일명")
+):
+    """
+    변환된 파일 다운로드 API
+    
+    사용법:
+    - /download?file_path=/converted/xxx.pdf&filename=document.pdf
+    """
+    try:
+        # 파일 경로 검증 및 보안 체크
+        file_path_obj = Path(file_path)
+        
+        # 절대 경로가 아닌 경우 converted 디렉토리 기준으로 처리
+        if not file_path_obj.is_absolute():
+            from app.config import settings
+            file_path_obj = Path(settings.CONVERTED_DIR) / file_path
+        
+        if not file_path_obj.exists():
+            logger.error(f"Download file not found: {file_path_obj}")
+            return HTMLResponse(content="<h3>파일을 찾을 수 없습니다</h3>", status_code=404)
+        
+        if not file_path_obj.is_file():
+            logger.error(f"Download path is not a file: {file_path_obj}")
+            return HTMLResponse(content="<h3>올바른 파일이 아닙니다</h3>", status_code=400)
+        
+        # 파일명이 제공되지 않은 경우 원본 파일명 사용
+        download_filename = filename or file_path_obj.name
+        
+        logger.info(f"File download: {file_path_obj} as {download_filename}")
+        
+        return FileResponse(
+            path=file_path_obj,
+            filename=download_filename,
+            media_type='application/octet-stream'
+        )
+        
+    except Exception as e:
+        logger.error(f"Download error: {str(e)}")
+        return HTMLResponse(content=f"<h3>다운로드 중 오류가 발생했습니다: {str(e)}</h3>", status_code=500)

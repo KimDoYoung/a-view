@@ -102,7 +102,7 @@
                 <a :href="convertedUrl" target="_blank" class="btn btn-outline-primary btn-sm">
                     새 창에서 열기
                 </a>
-                <a :href="convertedUrl" download class="btn btn-outline-secondary btn-sm">
+                <a :href="`/download?file_path=${encodeURIComponent(convertedUrl.replace(window.location.origin, ''))}&filename=document.html`" class="btn btn-outline-secondary btn-sm">
                     다운로드
                 </a>
                 <!-- URL인 경우에만 원본 URL 버튼 표시 -->
