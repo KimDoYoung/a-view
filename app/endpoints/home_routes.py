@@ -1,10 +1,15 @@
 
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
+from typing import Optional
 
+from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat
 from app.utils import check_libreoffice
 from app.utils import get_redis, get_templates
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -31,12 +36,74 @@ async def home(request: Request):
     return templates.TemplateResponse("index.html", context)
 
 
-@router.get("/usage", response_class=HTMLResponse)
-async def usage(request: Request):
-    """사용법 페이지"""
-    templates = get_templates(request)
-    context = {
-        "request": request,
-        "title": "사용법",
-    }
-    return templates.TemplateResponse("usage.html", context)
+#-----------------------------------------------------
+# 문서 변환 API
+#-----------------------------------------------------
+@router.get("/convert", response_model=ConvertResponse)
+async def convert_document(
+    url: Optional[str] = Query(None, description="변환할 문서의 URL"),
+    path: Optional[str] = Query(None, description="변환할 문서의 로컬 경로"),
+    output: OutputFormat = Query(OutputFormat.HTML, description="출력 형식 (pdf 또는 html)")
+) -> ConvertResponse:
+    """
+    문서 변환 API
+    
+    사용법:
+    - URL: /convert?url=https://example.com/file.pdf&output=html
+    - 경로: /convert?path=c:\\myfolder\\1.docx&output=pdf
+    """
+    
+    try:
+        # ConvertParams 생성 시 validation 오류 처리
+        params = ConvertParams(url=url, path=path, output=output)
+        
+        if params.is_url_source:
+            logger.info(f"URL에서 다운로드: {params.url}")
+            # TODO: 실제 변환 로직
+            # converted_url = await download_and_convert(params.url, params.output)
+            converted_url = f"http://a-view-host:8003/files/converted_{hash(params.url)}.{params.output}"
+            
+            return ConvertResponse.success_response(
+                url=converted_url,
+                message=f"URL 문서가 {params.output} 형식으로 변환되었습니다"
+            )
+        else:
+            logger.info(f"로컬 파일 변환: {params.path}")
+            # TODO: 실제 변환 로직
+            # converted_url = await convert_local_file(params.path, params.output)
+            converted_url = f"http://a-view-host:8003/files/converted_{hash(params.path)}.{params.output}"
+            
+            return ConvertResponse.success_response(
+                url=converted_url,
+                message=f"로컬 파일이 {params.output} 형식으로 변환되었습니다"
+            )
+            
+    except ValueError as e:
+        # 검증 오류 (파일 존재하지 않음, URL 형식 오류 등)
+        logger.error(f"Validation error: {str(e)}")
+        return ConvertResponse.error_response(f"입력 오류: {str(e)}")
+    except FileNotFoundError as e:
+        # 파일 없음 오류
+        logger.error(f"File not found: {str(e)}")
+        return ConvertResponse.error_response(f"파일을 찾을 수 없습니다: {str(e)}")
+    except Exception as e:
+        # 기타 오류
+        logger.error(f"Unexpected error: {str(e)}")
+        return ConvertResponse.error_response(f"변환 중 오류가 발생했습니다: {str(e)}")
+    
+@router.post("/convert", response_model=ConvertResponse)
+async def convert_document_post(request: ConvertRequest) -> ConvertResponse:
+    """POST 방식 변환"""
+    try:
+        params = ConvertParams(**request.model_dump())
+        return await convert_document(
+            url=params.url, 
+            path=params.path, 
+            output=params.output
+        )
+    except ValueError as e:
+        logger.error(f"POST validation error: {str(e)}")
+        return ConvertResponse.error_response(f"입력 오류: {str(e)}")
+    except Exception as e:
+        logger.error(f"POST unexpected error: {str(e)}")
+        return ConvertResponse.error_response(f"변환 중 오류가 발생했습니다: {str(e)}")

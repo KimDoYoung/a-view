@@ -55,7 +55,7 @@ async def view_document(
 
 @router.get("/pdf/{filename}")
 async def serve_pdf(filename: str):
-    """변환된 PDF 파일 서빙"""
+    """변환된 PDF 파일 다운로드"""
     pdf_path = Path(settings.CONVERTED_DIR) / filename
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="PDF 파일을 찾을 수 없습니다")
