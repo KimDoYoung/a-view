@@ -26,7 +26,7 @@ async def view_document(
     redis_client = get_redis(request)
     try:
         # URL에서 파일 다운로드 및 PDF 변환 (캐시 포함)
-        pdf_path, original_filename = await get_cached_pdf(url, redis_client, settings)
+        pdf_path, original_filename = await get_cached_pdf(redis_client, url, settings)
 
         if mode == "download":
             # 다운로드 모드: PDF 파일 직접 반환

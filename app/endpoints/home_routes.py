@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from typing import Optional
 
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat
-from app.utils import check_libreoffice, convert_local_file, download_and_convert
+from app.utils import check_libreoffice, local_file_copy_and_convert, url_download_and_convert
 from app.utils import get_redis, get_templates
 from logger import get_logger
 
@@ -60,7 +60,7 @@ async def convert_document(
         
         if params.is_url_source:
             logger.info(f"URL에서 다운로드: {params.url}")
-            converted_url = await download_and_convert(redis_client,params.url, params.output)
+            converted_url = await url_download_and_convert(redis_client,params.url, params.output)
             
             return ConvertResponse.success_response(
                 url=converted_url,
@@ -68,7 +68,7 @@ async def convert_document(
             )
         else:
             logger.info(f"로컬 파일 변환: {params.path}")
-            converted_url = await convert_local_file(redis_client, params.path, params.output)
+            converted_url = await local_file_copy_and_convert(redis_client, params.path, params.output)
             
             return ConvertResponse.success_response(
                 url=converted_url,
