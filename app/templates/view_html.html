@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f8f9fa;
+        }
+        
+        .html-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .html-header {
+            background: white;
+            border-bottom: 1px solid #dee2e6;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .html-viewer {
+            width: 100%;
+            height: calc(100vh - 60px);
+            border: none;
+            background: white;
+        }
+        
+        .file-info {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .btn-sm {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(248, 249, 250, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .format-badge {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+        }
+
+        .url-info {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body x-data="{
+    isUrl: '{{ source_origin }}' === 'url',
+    originalSource: '{{ original_source }}',
+    convertedUrl: '{{ converted_url }}'
+}">
+    <div class="html-container">
+        <!-- 헤더 -->
+        <div class="html-header">
+            <div class="file-info">
+                <div class="d-flex align-items-center">
+                    <!-- URL인 경우 말줄임표 처리 -->
+                    <strong x-show="isUrl" class="url-info" :title="originalSource" x-text="originalSource"></strong>
+                    <!-- 로컬 파일인 경우 전체 경로 표시 -->
+                    <strong x-show="!isUrl" x-text="originalSource"></strong>
+                    
+                    <span class="badge bg-success format-badge ms-2">HTML로 변환됨</span>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a :href="convertedUrl" target="_blank" class="btn btn-outline-primary btn-sm">
+                    새 창에서 열기
+                </a>
+                <a :href="convertedUrl" download class="btn btn-outline-secondary btn-sm">
+                    다운로드
+                </a>
+                <!-- URL인 경우에만 원본 URL 버튼 표시 -->
+                <a x-show="isUrl" :href="originalSource" target="_blank" class="btn btn-outline-info btn-sm">
+                    원본 URL
+                </a>
+            </div>
+        </div>
+        
+        <!-- HTML 뷰어 -->
+        <div class="position-relative flex-fill">
+            <!-- 로딩 오버레이 -->
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="text-center">
+                    <div class="spinner-border text-success mb-3" role="status">
+                        <span class="visually-hidden">로딩 중...</span>
+                    </div>
+                    <div x-show="isUrl">URL에서 다운로드한 문서를 HTML로 변환 중...</div>
+                    <div x-show="!isUrl">문서를 HTML로 변환 중...</div>
+                    <div x-show="isUrl" class="mt-2 text-muted small" x-text="originalSource"></div>
+                </div>
+            </div>
+            
+            <!-- HTML iframe -->
+            <iframe 
+                id="htmlViewer"
+                src="{{ converted_url }}" 
+                class="html-viewer"
+                title="HTML 뷰어"
+                onload="hideLoading()"
+                onerror="showError()">
+            </iframe>
+        </div>
+    </div>
+
+    <script>
+        let loadTimeout;
+        
+        // 로딩 완료 처리
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+            if (loadTimeout) {
+                clearTimeout(loadTimeout);
+            }
+        }
+        
+        // 에러 표시
+        function showError() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                const isUrl = '{{ source_origin }}' === 'url';
+                const originalSource = '{{ original_source }}';
+                const convertedUrl = '{{ converted_url }}';
+                
+                const originalButton = isUrl ? 
+                    `<a href="${originalSource}" class="btn btn-outline-info" target="_blank">원본 URL</a>` : '';
+                
+                overlay.innerHTML = `
+                    <div class="text-center p-4">
+                        <div class="alert alert-danger">
+                            <h5>HTML을 불러올 수 없습니다</h5>
+                            <p>HTML 변환에 실패했거나 파일에 문제가 있을 수 있습니다.</p>
+                            <div class="d-flex gap-2 justify-content-center">
+                                <a href="${convertedUrl}" class="btn btn-outline-primary" target="_blank">
+                                    직접 열기
+                                </a>
+                                ${originalButton}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 로딩 타임아웃 (30초)
+        loadTimeout = setTimeout(function() {
+            showError();
+        }, 30000);
+        
+        // iframe 로드 체크
+        const viewer = document.getElementById('htmlViewer');
+        if (viewer) {
+            viewer.addEventListener('load', function() {
+                try {
+                    hideLoading();
+                } catch (e) {
+                    hideLoading();
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -400,7 +400,7 @@ async def url_download_and_convert(redis_client: redis.Redis, url: str, output_f
     return url
 
 
-async def local_file_copy_and_convert(redis_client: redis.Redis,path: str, output_format: str) -> str:
+async def local_file_copy_and_convert(redis_client: redis.Redis, path: str, output_format: str) -> str:
     """
     로컬 파일을 지정된 형식으로 변환
     Returns: 변환된 파일의 URL (임시로 생성된 URL)
