@@ -14,15 +14,6 @@ from config import settings
 router = APIRouter()
 
 
-# def _get_redis(request: Request):
-#     # main.py에서 app.state.redis에 넣어둔 인스턴스를 꺼내씀
-#     return getattr(request.app.state, "redis", None)
-
-
-# def _get_templates(request: Request):
-#     # main.py에서 app.state.templates에 넣어둔 인스턴스를 꺼내씀
-#     return request.app.state.templates
-
 @router.get("/", response_class=HTMLResponse)
 async def view_document(
     request: Request,

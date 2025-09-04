@@ -52,6 +52,10 @@ def add_events(app: FastAPI):
 
 def startup_event(app: FastAPI):
     """애플리케이션 시작 시 초기화 작업"""
+    logger.info("------------------------------------------------")
+    logger.info(f"✳️ 시작: {settings.APP_NAME} v{settings.VERSION}")
+    logger.info("------------------------------------------------")
+
     # 디렉토리 생성
     Path(settings.CACHE_DIR).mkdir(parents=True, exist_ok=True)
     Path(settings.CONVERTED_DIR).mkdir(parents=True, exist_ok=True)
@@ -75,32 +79,38 @@ def startup_event(app: FastAPI):
     app.state.redis = redis_client
     app.state.templates = templates
     
-    logger.info(f"🚀 {settings.APP_NAME} v{settings.VERSION} 시작")
-    logger.info(f"📁 캐시 디렉토리: {settings.CACHE_DIR}")
-    logger.info(f"🔧 LibreOffice 상태: {'✅ OK' if check_libreoffice()[0] else '❌ ERROR'}")
+    logger.info(f"✅ 로그 디렉토리: {settings.LOG_DIR}, 레벨 : {settings.LOG_LEVEL}")
+    logger.info(f"✅ 캐시 디렉토리: {settings.CACHE_DIR}")
+    logger.info(f"✅ HTML Template 디렉토리: {TEMPLATE_DIR}")
+    logger.info(f"✅ 변환된 파일 디렉토리: {settings.CONVERTED_DIR}")
+    logger.info(f"✔️ LibreOffice 상태: {'✅ OK' if check_libreoffice()[0] else '❌ ERROR'}")
     
     if redis_client:
         try:
             redis_client.ping()
-            logger.info("📦 Redis 연결: ✅ OK")
+            logger.info(f"✔️ Redis HOST: {settings.REDIS_HOST} - {settings.REDIS_PORT}")
+            logger.info("✅ Redis 연결:  OK")
         except Exception as e:
             logger.error(f"❌ Redis 연결 실패: {e}")
     else:
-        logger.warning("📦 Redis: ❌ 비활성화")
+        logger.warning("❌ Redis:  비활성화")
 
 def shutdown_event():
     """애플리케이션 종료 시 정리 작업"""
-    logger.info(f"🛑 {settings.APP_NAME} 종료")
+    logger.info(f"✅ {settings.APP_NAME} 종료")
     try:
         cleanup_old_cache_files(24)
-        logger.info("캐시 정리 완료")
+        logger.info("✅ 캐시 정리 완료")
+        logger.info("------------------------------------------------")
+        logger.info(f"✳️ 종료: {settings.APP_NAME} v{settings.VERSION}")
+        logger.info("------------------------------------------------")
+
     except Exception as e:
-        logger.error(f"캐시 정리 실패: {e}")
+        logger.error(f"❌ 캐시 정리 실패: {e}")
 
 app = create_app()
 
 if __name__ == "__main__":
-    logger.info("Document Viewer for AssetERP")
     uvicorn.run(
         app,
         host="0.0.0.0",

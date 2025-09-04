@@ -24,7 +24,10 @@ SUPPORTED_EXTENSIONS = {
     '.doc', '.docx', '.odt', '.rtf',  # 문서
     '.xls', '.xlsx', '.ods', '.csv',   # 스프레드시트  
     '.ppt', '.pptx', '.odp',          # 프레젠테이션
-    '.pdf'                            # PDF (이미 변환된 파일)
+    '.pdf',                            # PDF (이미 변환된 파일)
+    '.txt',
+    '.md',
+    '.html', '.htm'
 }
 
 def get_redis(request):
@@ -188,8 +191,8 @@ def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
         return pdf_path
     
     # LibreOffice 실행 파일 찾기
-    soffice_exe = find_soffice()
-    if not soffice_exe:
+    libre_office = find_soffice()
+    if not libre_office:
         raise HTTPException(
             status_code=500,
             detail="LibreOffice 실행 파일을 찾을 수 없습니다"
@@ -197,7 +200,7 @@ def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
     
     # LibreOffice 변환 명령
     cmd = [
-        str(soffice_exe),
+        str(libre_office),
         "--headless",
         "--convert-to", "pdf",
         "--outdir", str(CONVERTED_DIR),
