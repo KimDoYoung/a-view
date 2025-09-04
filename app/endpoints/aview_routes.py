@@ -66,6 +66,19 @@ async def serve_pdf(filename: str):
         headers={"Content-Disposition": "inline"},
     )
 
+@router.get("/html/{filename}")
+async def serve_html(filename: str):
+    """변환된 HTML 파일 다운로드"""
+    html_path = Path(settings.CONVERTED_DIR) / filename
+    if not html_path.exists():
+        raise HTTPException(status_code=404, detail="HTML 파일을 찾을 수 없습니다")
+
+    return FileResponse(
+        path=html_path,
+        media_type="text/html",
+        headers={"Content-Disposition": "inline"},
+    )
+
 
 @router.get("/health")
 async def health_check(request: Request):

@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from typing import Optional
 
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat
-from app.utils import check_libreoffice
+from app.utils import check_libreoffice, convert_local_file, download_and_convert
 from app.utils import get_redis, get_templates
 from logger import get_logger
 
@@ -41,6 +41,7 @@ async def home(request: Request):
 #-----------------------------------------------------
 @router.get("/convert", response_model=ConvertResponse)
 async def convert_document(
+    request: Request,
     url: Optional[str] = Query(None, description="변환할 문서의 URL"),
     path: Optional[str] = Query(None, description="변환할 문서의 로컬 경로"),
     output: OutputFormat = Query(OutputFormat.HTML, description="출력 형식 (pdf 또는 html)")
@@ -52,16 +53,14 @@ async def convert_document(
     - URL: /convert?url=https://example.com/file.pdf&output=html
     - 경로: /convert?path=c:\\myfolder\\1.docx&output=pdf
     """
-    
+    redis_client = get_redis(request)
     try:
         # ConvertParams 생성 시 validation 오류 처리
         params = ConvertParams(url=url, path=path, output=output)
         
         if params.is_url_source:
             logger.info(f"URL에서 다운로드: {params.url}")
-            # TODO: 실제 변환 로직
-            # converted_url = await download_and_convert(params.url, params.output)
-            converted_url = f"http://a-view-host:8003/files/converted_{hash(params.url)}.{params.output}"
+            converted_url = await download_and_convert(redis_client,params.url, params.output)
             
             return ConvertResponse.success_response(
                 url=converted_url,
@@ -69,13 +68,11 @@ async def convert_document(
             )
         else:
             logger.info(f"로컬 파일 변환: {params.path}")
-            # TODO: 실제 변환 로직
-            # converted_url = await convert_local_file(params.path, params.output)
-            converted_url = f"http://a-view-host:8003/files/converted_{hash(params.path)}.{params.output}"
+            converted_url = await convert_local_file(redis_client, params.path, params.output)
             
             return ConvertResponse.success_response(
                 url=converted_url,
-                message=f"로컬 파일이 {params.output} 형식으로 변환되었습니다"
+                message=f"로칼 파일이 {params.output} 형식으로 변환되었습니다"
             )
             
     except ValueError as e:

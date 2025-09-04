@@ -34,6 +34,12 @@ class ConvertParams(BaseModel):
         if url and path:
             raise ValueError('url과 path는 동시에 제공할 수 없습니다')
         
+        # 파일 경로가 있는 경우, 입력 파일과 출력 파일 형식이 동일한지 체크
+        if path:
+            path_obj = Path(path)
+            if path_obj.suffix.lower() == f'.{values.output.value}':
+                raise ValueError(f'입력 파일과 출력 파일 형식이 동일합니다: {path_obj.suffix}')
+        
         return values
     
     @field_validator('url')
@@ -52,14 +58,6 @@ class ConvertParams(BaseModel):
             if not any(url_lower.endswith(ext) for ext in supported_extensions):
                 raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
         return v
-        # url_lower = v.lower()
-        
-        # # 확장자가 있는 경우만 체크 (없으면 통과)
-        # if '.' in Path(v).suffix:
-        #     if not any(url_lower.endswith(ext) for ext in supported_extensions):
-        #         raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
-        
-        # return v
     
     @field_validator('path')
     def validate_path(cls, v):
@@ -76,9 +74,9 @@ class ConvertParams(BaseModel):
         
         if not path_obj.is_file():
             raise ValueError(f'디렉토리가 아닌 파일이어야 합니다: {v}')
-        
+            
         # 지원하는 파일 확장자 체크
-        supported_extensions = ['.doc', '.docx', '.pdf', '.odt', '.rtf', '.txt', '.hwp']
+        supported_extensions = CONVERTABLE_EXTENSIONS
         if path_obj.suffix.lower() not in supported_extensions:
             raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
         
@@ -138,8 +136,8 @@ class ConvertRequest(BaseModel):
         
         if not v.startswith(('http://', 'https://')):
             raise ValueError('URL은 http:// 또는 https://로 시작해야 합니다')
-        
-        supported_extensions = ['.doc', '.docx', '.pdf', '.odt', '.rtf', '.txt', '.hwp']
+
+        supported_extensions = CONVERTABLE_EXTENSIONS
         url_lower = v.lower()
         
         if '.' in Path(v).suffix:
@@ -161,8 +159,8 @@ class ConvertRequest(BaseModel):
         
         if not path_obj.is_file():
             raise ValueError(f'디렉토리가 아닌 파일이어야 합니다: {v}')
-        
-        supported_extensions = ['.doc', '.docx', '.pdf', '.odt', '.rtf', '.txt', '.hwp']
+
+        supported_extensions = CONVERTABLE_EXTENSIONS
         if path_obj.suffix.lower() not in supported_extensions:
             raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
         

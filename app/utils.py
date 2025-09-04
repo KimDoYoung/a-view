@@ -17,7 +17,10 @@ import httpx
 import redis
 from fastapi import HTTPException
 
-from app.config import Config
+from app.config import settings, Config
+from app.logger import get_logger
+
+logger = get_logger(__name__)
 
 # LibreOffice 지원 확장자 및 MIME 타입
 SUPPORTED_EXTENSIONS = {
@@ -142,7 +145,7 @@ def validate_file_extension(filename: str) -> str:
 
 async def download_and_cache_file(url: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str]:
     """
-    외부 URL에서 파일을 다운로드하고 캐시에 저장
+    외부 URL에서 파일을 다운로드하고 캐시에 저장, 이미 캐쉬에 있으면 재사용
     Returns: (파일 경로, 원본 파일명)
     """
     CACHE_DIR = Path(settings.CACHE_DIR)
@@ -173,6 +176,48 @@ async def download_and_cache_file(url: str, redis_client: redis.Redis, settings:
         'filename': filename,
         'url': url,
         'size': len(file_content),
+        'ext': file_ext
+    })
+    redis_client.expire(cache_key, 86400)  # 24시간
+    
+    return cache_file_path, filename
+
+async def copy_and_cache_file(path: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str]:
+    """
+    로컬 파일을 캐시에 복사, 이미 캐쉬에 있으면 재사용
+    Returns: (파일 경로, 원본 파일명)
+    """
+    CACHE_DIR = Path(settings.CACHE_DIR)
+    input_path = Path(path)
+    
+    if not input_path.exists() or not input_path.is_file():
+        raise HTTPException(status_code=400, detail="지정된 경로에 파일이 존재하지 않습니다")
+    
+    filename = input_path.name
+    file_ext = validate_file_extension(filename)
+    
+    # 캐시 키 생성 (파일 경로 기반)
+    cache_key = generate_cache_key(str(input_path.resolve()))
+    
+    # Redis에서 캐시된 파일 정보 확인
+    cached_info = redis_client.hgetall(cache_key)
+    
+    if cached_info:
+        cached_path = Path(cached_info.get('path', ''))
+        if cached_path.exists():
+            return cached_path, cached_info.get('filename', 'unknown')
+    
+    # 캐시 파일 저장
+    url_hash = hashlib.md5(str(input_path.resolve()).encode()).hexdigest()
+    cache_file_path = CACHE_DIR / f"{url_hash}{file_ext}"
+    shutil.copy2(input_path, cache_file_path)
+    
+    # Redis에 캐시 정보 저장 (24시간 TTL)
+    redis_client.hset(cache_key, mapping={
+        'path': str(cache_file_path),
+        'filename': filename,
+        'url': str(input_path.resolve()),
+        'size': cache_file_path.stat().st_size,
         'ext': file_ext
     })
     redis_client.expire(cache_key, 86400)  # 24시간
@@ -241,19 +286,68 @@ def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
             detail=f"문서 변환 중 오류 발생: {str(e)}"
         )
 
-async def get_cached_pdf(url: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str]:
+def convert_to_html(input_path: Path, CONVERTED_DIR: Path) -> Path:
     """
-    URL에서 파일을 다운로드하고 PDF로 변환하여 반환
-    Returns: (PDF 파일 경로, 원본 파일명)
+    LibreOffice를 사용해 파일을 HTML로 변환
+    Returns: 변환된 HTML 파일 경로
     """
-    # 파일 다운로드 및 캐시
-    file_path, original_filename = await download_and_cache_file(url, redis_client, settings)
+    # 이미 HTML인 경우 그대로 반환
+    if input_path.suffix.lower() in {'.html', '.htm'}:
+        return input_path
     
-    # PDF로 변환
-    converted_dir = Path(settings.CONVERTED_DIR)
-    pdf_path = convert_to_pdf(file_path, converted_dir)
+    # 변환된 파일 경로
+    html_filename = f"{input_path.stem}.html"
+    html_path = CONVERTED_DIR / html_filename
     
-    return pdf_path, original_filename
+    # 이미 변환된 파일이 있으면 반환
+    if html_path.exists():
+        return html_path
+    
+    # LibreOffice 실행 파일 찾기
+    libre_office = find_soffice()
+    if not libre_office:
+        raise HTTPException(
+            status_code=500,
+            detail="LibreOffice 실행 파일을 찾을 수 없습니다"
+        )
+    
+    # LibreOffice 변환 명령
+    cmd = [
+        str(libre_office),
+        "--headless",
+        "--convert-to", "html",
+        "--outdir", str(CONVERTED_DIR),
+        str(input_path)
+    ]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        
+        if result.returncode != 0:
+            raise HTTPException(
+                status_code=500,
+                detail=f"LibreOffice 변환 실패: {result.stderr}"
+            )
+        
+        if not html_path.exists():
+            raise HTTPException(
+                status_code=500,
+                detail="변환된 HTML 파일을 찾을 수 없습니다"
+            )
+            
+        return html_path
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(
+            status_code=500,
+            detail="문서 변환 시간이 초과되었습니다"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"문서 변환 중 오류 발생: {str(e)}"
+        )
+
 
 def cleanup_old_cache_files(max_age_hours: int = 24):
     """오래된 캐시 파일 정리"""
@@ -271,3 +365,56 @@ def cleanup_old_cache_files(max_age_hours: int = 24):
                     cache_file.unlink()
                 except Exception:
                     pass  # 파일 삭제 실패 시 무시
+
+async def get_cached_pdf(url: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str]:
+    """
+    URL에서 파일을 다운로드하고 PDF로 변환하여 반환
+    Returns: (PDF 파일 경로, 원본 파일명)
+    """
+    # 파일 다운로드 및 캐시
+    file_path, original_filename = await download_and_cache_file(url, redis_client, settings)
+    
+    # PDF로 변환
+    converted_dir = Path(settings.CONVERTED_DIR)
+    pdf_path = convert_to_pdf(file_path, converted_dir)
+    
+    return pdf_path, original_filename
+
+async def download_and_convert(redis_client: redis.Redis, url: str, output_format: str) -> str:
+    """
+    URL에서 파일을 다운로드하고 지정된 형식으로 변환
+    Returns: 변환된 파일의 URL (임시로 생성된 URL)
+    """
+    converted_dir = Path(settings.CONVERTED_DIR)
+    if output_format.lower().endswith('pdf'):
+        file_path, original_filename = await download_and_cache_file(url, redis_client, settings)
+        output_path = convert_to_pdf(file_path, converted_dir)
+
+    elif output_format.lower().endswith('html'):
+        file_path, original_filename = await download_and_cache_file(url, redis_client, settings)
+        output_path = convert_to_html(file_path, converted_dir)
+    
+    logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
+    url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format}/{output_path.name}"
+    logger.info(f"변환된 파일 URL: {url}")
+    return url
+
+
+async def convert_local_file(redis_client: redis.Redis,path: str, output_format: str) -> str:
+    """
+    로컬 파일을 지정된 형식으로 변환
+    Returns: 변환된 파일의 URL (임시로 생성된 URL)
+    """
+    converted_dir = Path(settings.CONVERTED_DIR)
+    if output_format.lower().endswith('pdf'):
+        file_path, original_filename = await copy_and_cache_file(path, redis_client, settings)
+        output_path = convert_to_pdf(file_path, converted_dir)
+
+    elif output_format.lower().endswith('html'):
+        file_path, original_filename = await copy_and_cache_file(path, redis_client, settings)
+        output_path = convert_to_html(file_path, converted_dir)
+
+    logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
+    url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    logger.info(f"변환된 파일 URL: {url}")
+    return url
