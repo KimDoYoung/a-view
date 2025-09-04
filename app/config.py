@@ -46,10 +46,10 @@ class Config:
         
         # 보안 설정
         self.ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')
-        self.ALLOWED_FILE_TYPES = os.getenv(
-            'ALLOWED_FILE_TYPES', 
-            '.doc,.docx,.odt,.rtf,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,.pdf,.png,.jpg'
-        ).split(',')
+        # self.ALLOWED_FILE_TYPES = os.getenv(
+        #     'ALLOWED_FILE_TYPES', 
+        #     '.doc,.docx,.odt,.rtf,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,.pdf,.png,.jpg'
+        # ).split(',')
         
         # 로그 설정
         self.LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')

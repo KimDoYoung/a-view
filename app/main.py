@@ -55,6 +55,8 @@ def startup_event(app: FastAPI):
     logger.info("------------------------------------------------")
     logger.info(f"✳️ 시작: {settings.APP_NAME} v{settings.VERSION}")
     logger.info("------------------------------------------------")
+    logger.info(f"✔️ HOST: {settings.HOST} - PORT: {settings.PORT}")
+    logger.info(f"✔️ 디버그 모드: {'✅ 활성화' if settings.DEBUG else '❌ 비활성화'}")
 
     # 디렉토리 생성
     Path(settings.CACHE_DIR).mkdir(parents=True, exist_ok=True)
