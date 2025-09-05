@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from typing import Optional
 from pathlib import Path
 
-from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat
+from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat, ViewParams
 from app.utils import check_libreoffice, local_file_copy_and_convert, url_download_and_convert
 from app.utils import get_redis, get_templates
 from logger import get_logger
@@ -112,25 +112,27 @@ async def convert_document_post(request: ConvertRequest) -> ConvertResponse:
 @router.get("/view", response_class=HTMLResponse)
 async def view_document(
     request: Request,
-    url: Optional[str] = Query(None, description="변환할 문서의 URL"),
-    path: Optional[str] = Query(None, description="변환할 문서의 로컬 경로"),
-    output: OutputFormat = Query(OutputFormat.HTML, description="출력 형식 (pdf 또는 html)")
+    url: Optional[str] = Query(None, description="보기할 문서의 URL"),
+    path: Optional[str] = Query(None, description="보기할 문서의 로컬 경로")
 ) -> HTMLResponse:
     """
-    문서 뷰어 API
+    문서 뷰어 API - 파일 확장자에 따라 자동으로 출력 포맷 결정
     
     사용법:
-    - URL: /view?url=https://example.com/file.pdf&output=html
-    - 경로: /view?path=c:\\myfolder\\1.docx&output=pdf
+    - URL: /view?url=https://example.com/file.docx (자동으로 PDF 변환)
+    - 경로: /view?path=c:\\myfolder\\1.txt (자동으로 HTML 변환)
     """
     redis_client = get_redis(request)
     try:
-        # ConvertParams 생성 시 validation 오류 처리
-        params = ConvertParams(url=url, path=path, output=output)
+        # ViewParams 생성 시 validation 오류 처리
+        params = ViewParams(url=url, path=path)
+        
+        # 자동으로 결정된 출력 포맷 사용
+        auto_output = params.auto_output_format
         
         if params.is_url_source:
-            logger.info(f"URL에서 다운로드 및 변환: {params.url}")
-            converted_url = await url_download_and_convert(redis_client,params.url, params.output)
+            logger.info(f"URL에서 다운로드 및 변환: {params.url} -> {auto_output.value}")
+            converted_url = await url_download_and_convert(redis_client, params.url, auto_output)
             
             templates = get_templates(request)
             context = {
@@ -139,13 +141,13 @@ async def view_document(
                 "converted_url": converted_url,
                 "original_source": params.url,
                 "source_origin": "url",
-                "output_format": params.output.value
+                "output_format": auto_output.value
             }
-            template_name = f"view_{params.output.value}.html"
+            template_name = f"view_{auto_output.value}.html"
             return templates.TemplateResponse(template_name, context)
         else:
-            logger.info(f"로컬 파일 변환: {params.path}")
-            converted_url = await local_file_copy_and_convert(redis_client, params.path, params.output)
+            logger.info(f"로컬 파일 변환: {params.path} -> {auto_output.value}")
+            converted_url = await local_file_copy_and_convert(redis_client, params.path, auto_output)
             
             templates = get_templates(request)
             context = {
@@ -154,9 +156,9 @@ async def view_document(
                 "converted_url": converted_url,
                 "original_source": params.path,
                 "source_origin": "path",
-                "output_format": params.output.value
+                "output_format": auto_output.value
             }
-            template_name = f"view_{params.output.value}.html"
+            template_name = f"view_{auto_output.value}.html"
             return templates.TemplateResponse(template_name, context)
             
     except ValueError as e:
@@ -171,7 +173,7 @@ async def view_document(
             "error_message": str(e),
             "original_source": url or path or "알 수 없음",
             "source_origin": "url" if url else "path",
-            "output_format": output.value if output else "html"
+            "output_format": "html"
         }
         return templates.TemplateResponse("view_error.html", context)
     except FileNotFoundError as e:
@@ -186,7 +188,7 @@ async def view_document(
             "error_message": str(e),
             "original_source": url or path or "알 수 없음",
             "source_origin": "url" if url else "path",
-            "output_format": output.value if output else "html"
+            "output_format": "html"
         }
         return templates.TemplateResponse("view_error.html", context)
     except Exception as e:
@@ -201,7 +203,7 @@ async def view_document(
             "error_message": str(e),
             "original_source": url or path or "알 수 없음",
             "source_origin": "url" if url else "path",
-            "output_format": output.value if output else "html"
+            "output_format": "html"
         }
         return templates.TemplateResponse("view_error.html", context)
 
@@ -231,18 +233,18 @@ async def download_file(
             file_path_obj = Path(settings.CONVERTED_DIR) / file_path
         
         if not file_path_obj.exists():
-            logger.error(f"Download file not found: {file_path_obj}")
+            logger.error(f"다운로드할 파일이 존재하지 않습니다: {file_path_obj}")
             return HTMLResponse(content="<h3>파일을 찾을 수 없습니다</h3>", status_code=404)
         
         if not file_path_obj.is_file():
-            logger.error(f"Download path is not a file: {file_path_obj}")
+            logger.error(f"다운로드할 경로가 파일이 아닙니다: {file_path_obj}")
             return HTMLResponse(content="<h3>올바른 파일이 아닙니다</h3>", status_code=400)
         
         # 파일명이 제공되지 않은 경우 원본 파일명 사용
         download_filename = filename or file_path_obj.name
         
-        logger.info(f"File download: {file_path_obj} as {download_filename}")
-        
+        logger.info(f"파일 다운로드: {file_path_obj} as {download_filename}")
+
         return FileResponse(
             path=file_path_obj,
             filename=download_filename,

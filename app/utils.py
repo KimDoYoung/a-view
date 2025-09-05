@@ -35,7 +35,7 @@ SUPPORTED_EXTENSIONS = {
 # pdf나 html로 변환가능한 확장자
 CONVERTABLE_EXTENSIONS =  {
     '.doc', '.docx', '.odt', '.rtf',
-    '.xls', '.xlsx', '.ods', '.csv',
+    '.xls', '.xlsx', '.ods', 
     '.ppt', '.pptx', '.odp'
 }
 
@@ -395,7 +395,7 @@ async def url_download_and_convert(redis_client: redis.Redis, url: str, output_f
         output_path = convert_to_html(file_path, converted_dir)
     
     logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format}/{output_path.name}"
+    url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
     logger.info(f"변환된 파일 URL: {url}")
     return url
 
