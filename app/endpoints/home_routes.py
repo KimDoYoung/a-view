@@ -30,12 +30,21 @@ async def home(request: Request):
 
     context = {
         "request": request,
-        "title": "A-View Document Processor",
+        "title": "A-View - Document Viewer for AssetERP",
         "libre_status": libre_status,
         "redis_status": redis_status,
     }
     return templates.TemplateResponse("index.html", context)
 
+@router.get("/about", response_class=HTMLResponse)
+async def about(request: Request):
+    """소개 페이지"""
+    templates = get_templates(request)
+    context = {
+        "request": request,
+        "title": "A-View 소개",
+    }
+    return templates.TemplateResponse("about.html", context)
 
 #-----------------------------------------------------
 # 문서 변환 API : convert (GET/POST)
