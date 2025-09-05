@@ -1,16 +1,6 @@
 """
 A-View 유틸리티 함수들
-- # LibreOffice 지원 확장자 및 MIME 타입
-SUPPORTED_EXTENSIONS = {
-    '.doc', '.docx', '.odt', '.rtf',  # 문서
-    '.xls', '.xlsx', '.ods', '.csv',   # 스프레드시트  
-    '.ppt', '.pptx', '.odp',          # 프레젠테이션
-    '.pdf',                            # PDF (이미 변환된 파일)
-    '.txt',
-    '.md',
-    '.html', '.htm',
-    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'  # 이미지
-}캐시 관리
+- 파일 다운로드 및 캐시 관리
 - LibreOffice 문서 변환
 - Redis 캐시 작업
 """
@@ -617,11 +607,205 @@ def convert_basic_image_to_html(image_path: Path, html_path: Path, original_file
 def convert_md_to_html(md_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     마크다운 파일을 HTML로 변환
+    markdown 라이브러리와 Pygments를 사용한 고급 렌더링
     Returns: 변환된 HTML 파일 경로  
     """
-    # TODO: 마크다운 변환 함수 구현 예정
-    logger.warning(f"마크다운 변환 기능은 아직 구현되지 않았습니다: {md_path}")
-    return convert_with_libreoffice(md_path, html_path)
+    try:
+        import markdown
+        # from markdown.extensions import codehilite, tables, toc, fenced_code
+        from jinja2 import Environment, FileSystemLoader
+        
+        logger.info(f"마크다운 변환 시작: {md_path}")
+        
+        # 여러 인코딩을 시도해서 마크다운 파일 읽기
+        encodings = ['utf-8', 'cp949', 'euc-kr', 'utf-8-sig', 'latin-1']
+        content = None
+        used_encoding = None
+        
+        for encoding in encodings:
+            try:
+                with open(md_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                used_encoding = encoding
+                logger.info(f"마크다운 파일을 {encoding} 인코딩으로 성공적으로 읽었습니다: {md_path}")
+                break
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        
+        if content is None:
+            raise ValueError("마크다운 파일을 읽을 수 없습니다. 지원되는 인코딩이 없습니다.")
+        
+        # 마크다운 확장 기능 설정
+        extensions = [
+            'codehilite',       # 코드 구문 강조
+            'tables',           # 테이블 지원
+            'toc',              # 목차 생성
+            'fenced_code',      # 펜스드 코드 블록
+            'nl2br',            # 줄바꿈을 <br>로 변환
+            'sane_lists',       # 리스트 처리 개선
+            'smarty',           # 스마트 따옴표/대시
+        ]
+        
+        # 확장 기능 설정
+        extension_configs = {
+            'codehilite': {
+                'css_class': 'highlight',
+                'use_pygments': True,
+                'noclasses': False,
+            },
+            'toc': {
+                'toc_depth': 6,
+                'permalink': True,
+                'permalink_title': '이 제목으로 링크',
+            }
+        }
+        
+        # 마크다운을 HTML로 변환
+        md = markdown.Markdown(
+            extensions=extensions,
+            extension_configs=extension_configs
+        )
+        
+        html_content_body = md.convert(content)
+        toc_html = getattr(md, 'toc', '')
+        
+        # 메타데이터 추출 (있는 경우)
+        meta = getattr(md, 'Meta', {})
+        
+        # 파일 정보
+        file_size = md_path.stat().st_size
+        file_size_kb = file_size / 1024
+        line_count = len(content.split('\n'))
+        char_count = len(content)
+        
+        # 헤딩 개수 계산
+        import re
+        headings = re.findall(r'^#{1,6}\s+(.+)$', content, re.MULTILINE)
+        heading_count = len(headings)
+        
+        # Pygments CSS 스타일 생성
+        from pygments.formatters import HtmlFormatter
+        from pygments.styles import get_style_by_name
+        
+        # 코드 강조 스타일 (GitHub 유사한 스타일)
+        try:
+            formatter = HtmlFormatter(style='vs', cssclass='highlight')  # vs 스타일이 GitHub과 유사
+        except Exception:
+            # 기본 스타일도 실패하면 스타일 없이
+            formatter = HtmlFormatter(cssclass='highlight')
+        syntax_css = formatter.get_style_defs('.highlight')
+        
+        # Jinja2 템플릿 로드
+        current_dir = Path(__file__).parent
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        
+        # 숫자 포매팅 필터 추가
+        def number_format(value):
+            return f"{value:,}"
+        env.filters['number_format'] = number_format
+        
+        template = env.get_template('viewer/markdown.html')
+        
+        # 템플릿 렌더링
+        display_filename = original_filename if original_filename else md_path.name
+        html_content = template.render(
+            filename=display_filename,
+            original_filename=display_filename,
+            markdown_content=html_content_body,
+            toc_content=toc_html,
+            has_toc=bool(toc_html.strip()),
+            syntax_css=syntax_css,
+            meta=meta,
+            file_size=file_size,
+            file_size_kb=round(file_size_kb, 2),
+            line_count=line_count,
+            char_count=char_count,
+            heading_count=heading_count,
+            encoding=used_encoding
+        )
+        
+        # HTML 파일로 저장 (UTF-8 인코딩)
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"마크다운을 HTML로 변환 완료: {md_path} -> {html_path}")
+        return html_path
+        
+    except ImportError as e:
+        # markdown 라이브러리가 없는 경우
+        logger.warning(f"마크다운 라이브러리가 없습니다: {e}")
+        return convert_basic_md_to_html(md_path, html_path, original_filename)
+    except Exception as e:
+        logger.error(f"마크다운을 HTML로 변환 실패: {str(e)}")
+        logger.error(f"예외 타입: {type(e).__name__}")
+        import traceback
+        logger.error(f"스택 트레이스: {traceback.format_exc()}")
+        # 실패 시 LibreOffice 사용
+        return convert_with_libreoffice(md_path, html_path)
+
+
+def convert_basic_md_to_html(md_path: Path, html_path: Path, original_filename: str = None) -> Path:
+    """
+    기본 마크다운 HTML 변환 (markdown 라이브러리 없이)
+    """
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        import html
+        
+        # 마크다운 파일 읽기
+        encodings = ['utf-8', 'cp949', 'euc-kr', 'utf-8-sig', 'latin-1']
+        content = None
+        used_encoding = None
+        
+        for encoding in encodings:
+            try:
+                with open(md_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                used_encoding = encoding
+                break
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        
+        if content is None:
+            raise ValueError("마크다운 파일을 읽을 수 없습니다.")
+        
+        # 기본적인 마크다운 처리 (제한적)
+        escaped_content = html.escape(content)
+        escaped_content = escaped_content.replace('\n', '<br/>')
+        
+        # 템플릿 렌더링
+        current_dir = Path(__file__).parent
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        template = env.get_template('viewer/markdown.html')
+        
+        display_filename = original_filename if original_filename else md_path.name
+        html_content = template.render(
+            filename=display_filename,
+            original_filename=display_filename,
+            markdown_content=f'<pre><code>{escaped_content}</code></pre>',
+            toc_content='',
+            has_toc=False,
+            syntax_css='',
+            meta={},
+            file_size=md_path.stat().st_size,
+            file_size_kb=round(md_path.stat().st_size / 1024, 2),
+            line_count=len(content.split('\n')),
+            char_count=len(content),
+            heading_count=0,
+            encoding=used_encoding
+        )
+        
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"기본 마크다운을 HTML로 변환 완료: {md_path} -> {html_path}")
+        return html_path
+        
+    except Exception as e:
+        logger.error(f"기본 마크다운 HTML 변환 실패: {str(e)}")
+        return convert_with_libreoffice(md_path, html_path)
 
 
 def convert_with_libreoffice(input_path: Path, html_path: Path) -> Path:
