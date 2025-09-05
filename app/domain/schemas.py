@@ -5,7 +5,7 @@ from typing import Optional, Self
 from pathlib import Path
 import os
 
-from app.utils import CONVERTABLE_EXTENSIONS
+from app.file_ext_definition import CONVERTABLE_EXTENSION
 
 class OutputFormat(str, Enum):
     """지원하는 출력 형식"""
@@ -75,7 +75,7 @@ class ConvertParams(BaseModel):
             raise ValueError('URL은 http:// 또는 https://로 시작해야 합니다')
         
         # 지원하는 파일 확장자 체크 (선택사항)
-        supported_extensions = CONVERTABLE_EXTENSIONS
+        supported_extensions = CONVERTABLE_EXTENSION
         url_lower = v.lower()
         if '.' in Path(v).suffix:
             if not any(url_lower.endswith(ext) for ext in supported_extensions):
@@ -99,7 +99,7 @@ class ConvertParams(BaseModel):
             raise ValueError(f'디렉토리가 아닌 파일이어야 합니다: {v}')
             
         # 지원하는 파일 확장자 체크
-        supported_extensions = CONVERTABLE_EXTENSIONS
+        supported_extensions = CONVERTABLE_EXTENSION
         if path_obj.suffix.lower() not in supported_extensions:
             raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
         
@@ -160,7 +160,7 @@ class ConvertRequest(BaseModel):
         if not v.startswith(('http://', 'https://')):
             raise ValueError('URL은 http:// 또는 https://로 시작해야 합니다')
 
-        supported_extensions = CONVERTABLE_EXTENSIONS
+        supported_extensions = CONVERTABLE_EXTENSION
         url_lower = v.lower()
         
         if '.' in Path(v).suffix:
@@ -183,7 +183,7 @@ class ConvertRequest(BaseModel):
         if not path_obj.is_file():
             raise ValueError(f'디렉토리가 아닌 파일이어야 합니다: {v}')
 
-        supported_extensions = CONVERTABLE_EXTENSIONS
+        supported_extensions = CONVERTABLE_EXTENSION
         if path_obj.suffix.lower() not in supported_extensions:
             raise ValueError(f'지원하지 않는 파일 형식입니다. 지원 형식: {supported_extensions}')
         

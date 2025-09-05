@@ -19,25 +19,11 @@ from fastapi import HTTPException
 
 from app.config import settings, Config
 from app.logger import get_logger
+from app.file_ext_definition import (
+    SUPPORTED_EXTENSIONS
+)
 
 logger = get_logger(__name__)
-
-# LibreOffice 지원 확장자 및 MIME 타입
-SUPPORTED_EXTENSIONS = {
-    '.doc', '.docx', '.odt', '.rtf',  # 문서
-    '.xls', '.xlsx', '.ods', '.csv',   # 스프레드시트  
-    '.ppt', '.pptx', '.odp',          # 프레젠테이션
-    '.pdf',                            # PDF (이미 변환된 파일)
-    '.txt',
-    '.md',
-    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp'
-}
-# pdf나 html로 변환가능한 확장자
-CONVERTABLE_EXTENSIONS =  {
-    '.doc', '.docx', '.odt', '.rtf',
-    '.xls', '.xlsx', '.ods', 
-    '.ppt', '.pptx', '.odp'
-}
 
 def get_redis(request):
     return getattr(request.app.state, "redis", None)
