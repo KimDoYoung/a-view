@@ -97,9 +97,9 @@
         
         /* 헤더 */
         .header {
-            background: white;
+            background: #e0e2e3;
             border-bottom: 1px solid #d0d7de;
-            padding: 16px 24px;
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -393,11 +393,12 @@
                         📋 목차
                     </button>
                     {% endif %}
-                    <h1 class="file-title">📝 {{ filename }}</h1>
+                    <h1 class="file-title"> 파일명 : {{ filename }}</h1>
                 </div>
                 <div class="file-info">
                     <span>{{ file_size_kb }} KB</span>
                     <span>{{ line_count|number_format }} 줄</span>
+                    <span>{{ char_count|number_format }} 문자</span>
                     {% if heading_count > 0 %}
                     <span>{{ heading_count }} 제목</span>
                     {% endif %}
@@ -406,28 +407,6 @@
             
             <!-- 마크다운 콘텐츠 -->
             <div class="markdown-body">
-                <!-- 파일 정보 -->
-                <div class="file-stats">
-                    <div class="stat-item">
-                        <span class="stat-value">{{ file_size_kb }}</span>
-                        <div class="stat-label">KB</div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value">{{ line_count|number_format }}</span>
-                        <div class="stat-label">줄</div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value">{{ char_count|number_format }}</span>
-                        <div class="stat-label">문자</div>
-                    </div>
-                    {% if heading_count > 0 %}
-                    <div class="stat-item">
-                        <span class="stat-value">{{ heading_count }}</span>
-                        <div class="stat-label">제목</div>
-                    </div>
-                    {% endif %}
-                </div>
-                
                 <!-- 마크다운 렌더링 결과 -->
                 {{ markdown_content|safe }}
             </div>
