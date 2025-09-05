@@ -56,7 +56,11 @@
 | 이미지파일들(.jpg, .png)             | HTML        |
 | Markdown(.md)                     | HTML        |
 
+### view 테스트
 
+```bash
+http://localhost:8003/view?path=c:\\tmp\\sample\\11.docx
+```
 
 
 
