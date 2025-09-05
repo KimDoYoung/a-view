@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 파일 - {{ filename }}</title>
+    <style>
+        body { 
+            font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f8f9fa;
+        }
+        .csv-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .csv-title {
+            color: #495057;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .csv-table {
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        th, td { 
+            border: 1px solid #dee2e6; 
+            padding: 8px 12px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #f8f9fa; 
+            font-weight: bold;
+            color: #495057;
+        }
+        .csv-table tbody tr.even { 
+            background-color: #f8f9fa; 
+        }
+        .csv-table tbody tr.odd { 
+            background-color: white; 
+        }
+        .csv-table tbody tr:hover {
+            background-color: #e9ecef;
+        }
+        .csv-info {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="csv-container">
+        <div class="csv-title">
+            📊 {{ filename }}
+        </div>
+        <div class="csv-info">
+            총 {{ row_count }} 행, {{ col_count }} 열
+        </div>
+        {{ table_html|safe }}
+    </div>
+</body>
+</html>

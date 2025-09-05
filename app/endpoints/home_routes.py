@@ -134,12 +134,19 @@ async def view_document(
             logger.info(f"URL에서 다운로드 및 변환: {params.url} -> {auto_output.value}")
             converted_url = await url_download_and_convert(redis_client, params.url, auto_output)
             
+            # URL에서 원본 파일명 추출
+            from urllib.parse import urlparse
+            parsed_url = urlparse(params.url)
+            original_filename = Path(parsed_url.path).name
+            
             templates = get_templates(request)
             context = {
                 "request": request,
                 "title": "문서 뷰어",
                 "converted_url": converted_url,
                 "original_source": params.url,
+                "original_filename": original_filename,
+                "original_url": params.url,  # 원본 다운로드용
                 "source_origin": "url",
                 "output_format": auto_output.value
             }
@@ -149,12 +156,17 @@ async def view_document(
             logger.info(f"로컬 파일 변환: {params.path} -> {auto_output.value}")
             converted_url = await local_file_copy_and_convert(redis_client, params.path, auto_output)
             
+            # 로컬 파일에서 원본 파일명 추출
+            original_filename = Path(params.path).name
+            
             templates = get_templates(request)
             context = {
                 "request": request,
                 "title": "문서 뷰어",
                 "converted_url": converted_url,
                 "original_source": params.path,
+                "original_filename": original_filename,
+                "original_path": params.path,  # 원본 다운로드용
                 "source_origin": "path",
                 "output_format": auto_output.value
             }
@@ -225,12 +237,31 @@ async def download_file(
     """
     try:
         # 파일 경로 검증 및 보안 체크
-        file_path_obj = Path(file_path)
+        logger.info(f"다운로드 요청 받은 파일 경로: {file_path}")
         
-        # 절대 경로가 아닌 경우 converted 디렉토리 기준으로 처리
-        if not file_path_obj.is_absolute():
-            from app.config import settings
-            file_path_obj = Path(settings.CONVERTED_DIR) / file_path
+        # URL 경로에서 실제 파일 경로 추출
+        # 예: /aview/html/test.html -> test.html
+        if file_path.startswith('/aview/'):
+            # /aview/html/filename 또는 /aview/pdf/filename 형태
+            path_parts = file_path.split('/')
+            if len(path_parts) >= 3:
+                actual_filename = path_parts[-1]  # 마지막 부분이 실제 파일명
+                logger.info(f"추출된 파일명: {actual_filename}")
+                
+                from app.config import settings
+                file_path_obj = Path(settings.CONVERTED_DIR) / actual_filename
+            else:
+                raise ValueError(f"잘못된 파일 경로 형식: {file_path}")
+        else:
+            # 일반적인 경로 처리
+            file_path_obj = Path(file_path)
+            
+            # 절대 경로가 아닌 경우 converted 디렉토리 기준으로 처리
+            if not file_path_obj.is_absolute():
+                from app.config import settings
+                file_path_obj = Path(settings.CONVERTED_DIR) / file_path
+        
+        logger.info(f"최종 파일 경로: {file_path_obj}")
         
         if not file_path_obj.exists():
             logger.error(f"다운로드할 파일이 존재하지 않습니다: {file_path_obj}")
@@ -254,3 +285,79 @@ async def download_file(
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         return HTMLResponse(content=f"<h3>다운로드 중 오류가 발생했습니다: {str(e)}</h3>", status_code=500)
+
+
+#-----------------------------------------------------
+# 원본 파일 다운로드 API : download-original (GET)
+#-----------------------------------------------------
+@router.get("/download-original")
+async def download_original_file(
+    request: Request,
+    url: Optional[str] = Query(None, description="원본 URL (URL 소스인 경우)"),
+    path: Optional[str] = Query(None, description="원본 로컬 경로 (경로 소스인 경우)"),
+    filename: Optional[str] = Query(None, description="다운로드 파일명")
+):
+    """
+    원본 파일 다운로드 API
+    
+    사용법:
+    - URL 소스: /download-original?url=http://example.com/file.txt&filename=file.txt
+    - 로컬 소스: /download-original?path=c:/temp/file.txt&filename=file.txt
+    """
+    try:
+        if url:
+            # URL에서 원본 파일 다운로드
+            logger.info(f"원본 URL 다운로드 요청: {url}")
+            
+            import httpx
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                
+                # 파일명 결정
+                if not filename:
+                    from urllib.parse import urlparse
+                    parsed_url = urlparse(url)
+                    filename = Path(parsed_url.path).name or "download_file"
+                
+                logger.info(f"URL에서 원본 파일 다운로드: {filename}")
+                
+                # 직접 파일 내용을 Response로 반환
+                from fastapi.responses import Response
+                return Response(
+                    content=response.content,
+                    media_type='application/octet-stream',
+                    headers={"Content-Disposition": f"attachment; filename={filename}"}
+                )
+                
+        elif path:
+            # 로컬 파일 다운로드
+            logger.info(f"원본 로컬 파일 다운로드 요청: {path}")
+            
+            file_path_obj = Path(path)
+            
+            if not file_path_obj.exists():
+                logger.error(f"원본 파일이 존재하지 않습니다: {file_path_obj}")
+                return HTMLResponse(content="<h3>원본 파일을 찾을 수 없습니다</h3>", status_code=404)
+            
+            if not file_path_obj.is_file():
+                logger.error(f"원본 경로가 파일이 아닙니다: {file_path_obj}")
+                return HTMLResponse(content="<h3>올바른 파일이 아닙니다</h3>", status_code=400)
+            
+            # 파일명 결정
+            download_filename = filename or file_path_obj.name
+            
+            logger.info(f"로컬에서 원본 파일 다운로드: {file_path_obj} as {download_filename}")
+            
+            return FileResponse(
+                path=file_path_obj,
+                filename=download_filename,
+                media_type='application/octet-stream'
+            )
+            
+        else:
+            return HTMLResponse(content="<h3>URL 또는 경로가 필요합니다</h3>", status_code=400)
+            
+    except Exception as e:
+        logger.error(f"원본 파일 다운로드 오류: {str(e)}")
+        return HTMLResponse(content=f"<h3>원본 파일 다운로드 중 오류가 발생했습니다: {str(e)}</h3>", status_code=500)

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마크다운 파일 - {{ filename }}</title>
+    <style>
+        body { 
+            font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }
+        .markdown-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 100%;
+        }
+        .markdown-header {
+            color: #495057;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .markdown-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .markdown-info {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .markdown-content {
+            /* 마크다운 스타일링 */
+        }
+        .markdown-content h1, 
+        .markdown-content h2, 
+        .markdown-content h3, 
+        .markdown-content h4, 
+        .markdown-content h5, 
+        .markdown-content h6 {
+            color: #495057;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        .markdown-content code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        .markdown-content pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #007bff;
+        }
+        .markdown-content blockquote {
+            border-left: 4px solid #dee2e6;
+            margin: 1em 0;
+            padding-left: 1em;
+            color: #6c757d;
+        }
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        .markdown-content th, 
+        .markdown-content td {
+            border: 1px solid #dee2e6;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .markdown-content th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="markdown-container">
+        <div class="markdown-header">
+            <div class="markdown-title">
+                📝 {{ filename }}
+            </div>
+            <div class="markdown-info">
+                {{ line_count|number_format }} 줄 | {{ char_count|number_format }} 문자 | 인코딩: {{ encoding }}
+            </div>
+        </div>
+        <div class="markdown-content">
+            {{ content|safe }}
+        </div>
+    </div>
+</body>
+</html>

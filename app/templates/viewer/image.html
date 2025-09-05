@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 파일 - {{ filename }}</title>
+    <style>
+        body { 
+            font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .image-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .image-header {
+            color: #495057;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .image-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .image-info {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        .image-content {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .image-viewer {
+            max-width: 100%;
+            height: auto;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .image-viewer:hover {
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body>
+    <div class="image-container">
+        <div class="image-header">
+            <div class="image-title">
+                🖼️ {{ filename }}
+            </div>
+            <div class="image-info">
+                크기: {{ width }}×{{ height }} | 파일 크기: {{ file_size }} | 포맷: {{ format }}
+            </div>
+        </div>
+        <div class="image-content">
+            <img src="{{ image_url }}" alt="{{ filename }}" class="image-viewer" onclick="toggleFullscreen(this)">
+        </div>
+    </div>
+
+    <script>
+        function toggleFullscreen(img) {
+            if (img.style.position === 'fixed') {
+                // 원래 크기로 복귀
+                img.style.position = '';
+                img.style.top = '';
+                img.style.left = '';
+                img.style.width = '';
+                img.style.height = '';
+                img.style.zIndex = '';
+                img.style.backgroundColor = '';
+                img.style.objectFit = '';
+            } else {
+                // 전체화면 모드
+                img.style.position = 'fixed';
+                img.style.top = '0';
+                img.style.left = '0';
+                img.style.width = '100vw';
+                img.style.height = '100vh';
+                img.style.zIndex = '9999';
+                img.style.backgroundColor = 'rgba(0,0,0,0.9)';
+                img.style.objectFit = 'contain';
+            }
+        }
+    </script>
+</body>
+</html>

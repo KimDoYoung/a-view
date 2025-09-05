@@ -289,7 +289,7 @@ def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
 def convert_to_html(input_path: Path, CONVERTED_DIR: Path) -> Path:
     """
     LibreOffice를 사용해 파일을 HTML로 변환
-    CSV 파일의 경우 pandas를 사용하여 한글 인코딩 문제 해결
+    특정 파일 타입은 전용 변환 함수 사용 (한글 인코딩 문제 해결)
     Returns: 변환된 HTML 파일 경로
     """
     # 이미 HTML인 경우 그대로 반환
@@ -304,64 +304,29 @@ def convert_to_html(input_path: Path, CONVERTED_DIR: Path) -> Path:
     if html_path.exists():
         return html_path
     
-    # CSV 파일의 경우 pandas를 사용하여 직접 변환 (한글 인코딩 문제 해결)
+    # 파일 타입별 전용 변환 함수 사용
     if input_path.suffix.lower() == '.csv':
         return convert_csv_to_html(input_path, html_path)
+    elif input_path.suffix.lower() == '.txt':
+        return convert_txt_to_html(input_path, html_path)
+    elif input_path.suffix.lower() in {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}:
+        return convert_image_to_html(input_path, html_path)
+    elif input_path.suffix.lower() == '.md':
+        return convert_md_to_html(input_path, html_path)
     
     # 그 외 파일들은 LibreOffice 사용
-    # LibreOffice 실행 파일 찾기
-    libre_office = find_soffice()
-    if not libre_office:
-        raise HTTPException(
-            status_code=500,
-            detail="LibreOffice 실행 파일을 찾을 수 없습니다"
-        )
-    
-    # LibreOffice 변환 명령
-    cmd = [
-        str(libre_office),
-        "--headless",
-        "--convert-to", "html",
-        "--outdir", str(CONVERTED_DIR),
-        str(input_path)
-    ]
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        if result.returncode != 0:
-            raise HTTPException(
-                status_code=500,
-                detail=f"LibreOffice 변환 실패: {result.stderr}"
-            )
-        
-        if not html_path.exists():
-            raise HTTPException(
-                status_code=500,
-                detail="변환된 HTML 파일을 찾을 수 없습니다"
-            )
-            
-        return html_path
-        
-    except subprocess.TimeoutExpired:
-        raise HTTPException(
-            status_code=500,
-            detail="문서 변환 시간이 초과되었습니다"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"문서 변환 중 오류 발생: {str(e)}"
-        )
+    return convert_with_libreoffice(input_path, html_path)
 
 
 def convert_csv_to_html(csv_path: Path, html_path: Path) -> Path:
     """
     CSV 파일을 pandas를 사용해서 HTML로 변환 (한글 인코딩 문제 해결)
+    Jinja2 템플릿 사용
     Returns: 변환된 HTML 파일 경로
     """
     try:
         import pandas as pd
+        from jinja2 import Environment, FileSystemLoader
         
         # 여러 인코딩을 시도해서 CSV 파일 읽기
         encodings = ['utf-8', 'cp949', 'euc-kr', 'utf-8-sig']
@@ -378,88 +343,44 @@ def convert_csv_to_html(csv_path: Path, html_path: Path) -> Path:
         if df is None:
             raise ValueError("CSV 파일을 읽을 수 없습니다. 지원되는 인코딩이 없습니다.")
         
-        # HTML 스타일 정의
-        html_style = """
-        <style>
-            body { 
-                font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif; 
-                margin: 20px; 
-                background-color: #f8f9fa;
-            }
-            .csv-container {
-                background-color: white;
-                border-radius: 8px;
-                padding: 20px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .csv-title {
-                color: #495057;
-                margin-bottom: 20px;
-                padding-bottom: 10px;
-                border-bottom: 2px solid #dee2e6;
-                font-size: 1.2em;
-                font-weight: bold;
-            }
-            table { 
-                border-collapse: collapse; 
-                width: 100%; 
-                margin-top: 10px;
-                font-size: 14px;
-            }
-            th, td { 
-                border: 1px solid #dee2e6; 
-                padding: 8px 12px; 
-                text-align: left; 
-            }
-            th { 
-                background-color: #f8f9fa; 
-                font-weight: bold;
-                color: #495057;
-            }
-            tr:nth-child(even) { 
-                background-color: #f8f9fa; 
-            }
-            tr:hover {
-                background-color: #e9ecef;
-            }
-            .csv-info {
-                color: #6c757d;
-                font-size: 0.9em;
-                margin-bottom: 15px;
-            }
-        </style>
+        # DataFrame을 HTML 테이블로 변환 (한글 지원 개선)
+        # pandas to_html의 한글 처리 문제를 해결하기 위해 직접 HTML 생성
+        html_table_rows = []
+        
+        # 헤더 생성
+        header_cells = [f"<th>{col}</th>" for col in df.columns]
+        html_table_rows.append(f"<tr>{''.join(header_cells)}</tr>")
+        
+        # 데이터 행 생성
+        for idx, row in df.iterrows():
+            data_cells = [f"<td>{str(value)}</td>" for value in row]
+            row_class = "even" if idx % 2 == 0 else "odd"
+            html_table_rows.append(f"<tr class='{row_class}'>{''.join(data_cells)}</tr>")
+        
+        table_html = f"""
+        <table class="csv-table" id="csvTable">
+            <thead>
+                {html_table_rows[0]}
+            </thead>
+            <tbody>
+                {''.join(html_table_rows[1:])}
+            </tbody>
+        </table>
         """
         
-        # DataFrame을 HTML로 변환 (한글 지원)
-        table_html = df.to_html(
-            index=False, 
-            classes='table table-striped',
-            table_id='csvTable',
-            escape=False,  # HTML 특수문자 이스케이프 비활성화
-            border=0
-        )
+        # Jinja2 템플릿 로드
+        from app.config import settings
+        template_dir = Path(settings.BASE_DIR) / "app" / "templates"
+        env = Environment(loader=FileSystemLoader(template_dir))
+        template = env.get_template('viewer/csv.html')
         
-        # 완전한 HTML 문서 생성
-        html_content = f"""<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV 파일 - {csv_path.name}</title>
-    {html_style}
-</head>
-<body>
-    <div class="csv-container">
-        <div class="csv-title">
-            📊 {csv_path.name}
-        </div>
-        <div class="csv-info">
-            총 {len(df)} 행, {len(df.columns)} 열
-        </div>
-        {table_html}
-    </div>
-</body>
-</html>"""
+        # 템플릿 렌더링
+        html_content = template.render(
+            filename=csv_path.name,
+            row_count=len(df),
+            col_count=len(df.columns),
+            table_html=table_html
+        )
         
         # HTML 파일로 저장 (UTF-8 인코딩)
         with open(html_path, 'w', encoding='utf-8') as f:
@@ -476,6 +397,107 @@ def convert_csv_to_html(csv_path: Path, html_path: Path) -> Path:
         logger.error(f"CSV to HTML 변환 실패: {str(e)}")
         # 실패 시 LibreOffice 사용
         return convert_with_libreoffice(csv_path, html_path)
+
+
+def convert_txt_to_html(txt_path: Path, html_path: Path) -> Path:
+    """
+    텍스트 파일을 HTML로 변환 (한글 인코딩 문제 해결)
+    Jinja2 템플릿 사용
+    Returns: 변환된 HTML 파일 경로
+    """
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        import html
+        
+        # 여러 인코딩을 시도해서 텍스트 파일 읽기
+        encodings = ['utf-8', 'cp949', 'euc-kr', 'utf-8-sig', 'latin-1']
+        content = None
+        used_encoding = None
+        
+        for encoding in encodings:
+            try:
+                with open(txt_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                used_encoding = encoding
+                logger.info(f"텍스트 파일을 {encoding} 인코딩으로 성공적으로 읽었습니다: {txt_path}")
+                break
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        
+        if content is None:
+            raise ValueError("텍스트 파일을 읽을 수 없습니다. 지원되는 인코딩이 없습니다.")
+        
+        # HTML 특수문자 이스케이프
+        escaped_content = html.escape(content)
+        
+        # 줄바꿈을 <br/> 태그로 변환
+        escaped_content = escaped_content.replace('\n', '<br/>')
+        
+        # 라인 수 계산 (원본 기준)
+        lines = content.split('\n')
+        line_count = len(lines)
+        
+        # 라인 넘버링 처리 (50줄 이하만)
+        show_line_numbers = line_count <= 50
+        line_numbers = None
+        
+        if show_line_numbers:
+            line_numbers = '<br/>'.join(str(i+1) for i in range(line_count))
+        
+        # Jinja2 템플릿 로드
+        from app.config import settings
+        template_dir = Path(settings.BASE_DIR) / "app" / "templates"
+        env = Environment(loader=FileSystemLoader(template_dir))
+        
+        # 숫자 포매팅 필터 추가
+        def number_format(value):
+            return f"{value:,}"
+        env.filters['number_format'] = number_format
+        
+        template = env.get_template('viewer/txt.html')
+        
+        # 템플릿 렌더링
+        html_content = template.render(
+            filename=txt_path.name,
+            line_count=line_count,
+            char_count=len(content),
+            encoding=used_encoding,
+            content=escaped_content,
+            show_line_numbers=show_line_numbers,
+            line_numbers=line_numbers
+        )
+        
+        # HTML 파일로 저장 (UTF-8 인코딩)
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"TXT를 HTML로 변환 완료: {txt_path} -> {html_path}")
+        return html_path
+        
+    except Exception as e:
+        logger.error(f"TXT to HTML 변환 실패: {str(e)}")
+        # 실패 시 LibreOffice 사용
+        return convert_with_libreoffice(txt_path, html_path)
+
+
+def convert_image_to_html(image_path: Path, html_path: Path) -> Path:
+    """
+    이미지 파일을 HTML로 변환 (뷰어 형태)
+    Returns: 변환된 HTML 파일 경로
+    """
+    # TODO: 이미지 변환 함수 구현 예정
+    logger.warning(f"이미지 변환 기능은 아직 구현되지 않았습니다: {image_path}")
+    return convert_with_libreoffice(image_path, html_path)
+
+
+def convert_md_to_html(md_path: Path, html_path: Path) -> Path:
+    """
+    마크다운 파일을 HTML로 변환
+    Returns: 변환된 HTML 파일 경로  
+    """
+    # TODO: 마크다운 변환 함수 구현 예정
+    logger.warning(f"마크다운 변환 기능은 아직 구현되지 않았습니다: {md_path}")
+    return convert_with_libreoffice(md_path, html_path)
 
 
 def convert_with_libreoffice(input_path: Path, html_path: Path) -> Path:

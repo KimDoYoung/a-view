@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텍스트 파일 - {{ filename }}</title>
+    <style>
+        body { 
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace; 
+            margin: 0; 
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .txt-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .txt-header {
+            color: #495057;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+            font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif;
+        }
+        .txt-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .txt-info {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .txt-content {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            font-size: 14px;
+            word-wrap: break-word;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+        .line-numbers {
+            display: inline-block;
+            width: 40px;
+            color: #6c757d;
+            text-align: right;
+            margin-right: 10px;
+            user-select: none;
+            border-right: 1px solid #dee2e6;
+            padding-right: 8px;
+        }
+        .content-with-lines {
+            display: flex;
+        }
+        .content-text {
+            flex: 1;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="txt-container">
+        <div class="txt-header">
+            <div class="txt-title">
+                📄 {{ filename }}
+            </div>
+            <div class="txt-info">
+                {{ line_count|number_format }} 줄 | {{ char_count|number_format }} 문자 | 인코딩: {{ encoding }}
+            </div>
+        </div>
+        {% if show_line_numbers %}
+        <div class="content-with-lines">
+            <div class="line-numbers">{{ line_numbers|safe }}</div>
+            <div class="content-text">{{ content|safe }}</div>
+        </div>
+        {% else %}
+        <div class="txt-content">{{ content|safe }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>

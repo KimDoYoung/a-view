@@ -102,9 +102,19 @@
                 <a :href="convertedUrl" target="_blank" class="btn btn-outline-primary btn-sm">
                     새 창에서 열기
                 </a>
-                <a :href="`/download?file_path=${encodeURIComponent(convertedUrl.replace(window.location.origin, ''))}&filename=document.pdf`" class="btn btn-outline-secondary btn-sm">
-                    다운로드
+                <a :href="`/download?file_path=${encodeURIComponent(new URL(convertedUrl).pathname)}&filename=${encodeURIComponent('{{ original_filename }}')}`" class="btn btn-outline-secondary btn-sm">
+                    PDF 다운로드
                 </a>
+                <!-- 원본 파일 다운로드 버튼 -->
+                {% if source_origin == 'url' %}
+                <a :href="`/download-original?url=${encodeURIComponent('{{ original_url }}')}&filename=${encodeURIComponent('{{ original_filename }}')}`" class="btn btn-outline-success btn-sm">
+                    원본 다운로드
+                </a>
+                {% else %}
+                <a :href="`/download-original?path=${encodeURIComponent('{{ original_path }}')}&filename=${encodeURIComponent('{{ original_filename }}')}`" class="btn btn-outline-success btn-sm">
+                    원본 다운로드
+                </a>
+                {% endif %}
                 <!-- URL인 경우에만 원본 URL 버튼 표시 -->
                 <a x-show="isUrl" :href="originalSource" target="_blank" class="btn btn-outline-info btn-sm">
                     원본 URL
