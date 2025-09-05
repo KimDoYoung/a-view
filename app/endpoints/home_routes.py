@@ -361,3 +361,52 @@ async def download_original_file(
     except Exception as e:
         logger.error(f"원본 파일 다운로드 오류: {str(e)}")
         return HTMLResponse(content=f"<h3>원본 파일 다운로드 중 오류가 발생했습니다: {str(e)}</h3>", status_code=500)
+
+
+#-----------------------------------------------------
+# 이미지 서빙 API : image
+#-----------------------------------------------------
+@router.get("/image")
+async def serve_image(request: Request, path: str = Query(..., description="이미지 파일 경로")):
+    """
+    이미지 파일 서빙 API
+    이미지 뷰어에서 실제 이미지를 표시하기 위한 엔드포인트
+    """
+    try:
+        from pathlib import Path
+        import mimetypes
+        
+        # 경로 정규화
+        image_path = Path(path)
+        
+        # 보안: 경로 순회 공격 방지
+        if not image_path.is_absolute():
+            logger.error(f"절대 경로가 아닙니다: {path}")
+            return HTMLResponse(content="<h3>잘못된 경로입니다</h3>", status_code=400)
+        
+        # 파일 존재 확인
+        if not image_path.exists():
+            logger.error(f"이미지 파일이 존재하지 않습니다: {image_path}")
+            return HTMLResponse(content="<h3>이미지를 찾을 수 없습니다</h3>", status_code=404)
+        
+        if not image_path.is_file():
+            logger.error(f"이미지 경로가 파일이 아닙니다: {image_path}")
+            return HTMLResponse(content="<h3>올바른 파일이 아닙니다</h3>", status_code=400)
+        
+        # 이미지 파일 형식 확인
+        mime_type, _ = mimetypes.guess_type(str(image_path))
+        if not mime_type or not mime_type.startswith('image/'):
+            logger.error(f"이미지 파일이 아닙니다: {image_path}, MIME: {mime_type}")
+            return HTMLResponse(content="<h3>이미지 파일이 아닙니다</h3>", status_code=400)
+        
+        logger.info(f"이미지 서빙: {image_path}, MIME: {mime_type}")
+        
+        return FileResponse(
+            path=image_path,
+            media_type=mime_type,
+            headers={"Cache-Control": "public, max-age=3600"}  # 1시간 캐시
+        )
+        
+    except Exception as e:
+        logger.error(f"이미지 서빙 오류: {str(e)}")
+        return HTMLResponse(content=f"<h3>이미지 서빙 중 오류가 발생했습니다: {str(e)}</h3>", status_code=500)

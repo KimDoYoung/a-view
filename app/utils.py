@@ -1,6 +1,16 @@
 """
 A-View 유틸리티 함수들
-- 파일 다운로드 및 캐시 관리
+- # LibreOffice 지원 확장자 및 MIME 타입
+SUPPORTED_EXTENSIONS = {
+    '.doc', '.docx', '.odt', '.rtf',  # 문서
+    '.xls', '.xlsx', '.ods', '.csv',   # 스프레드시트  
+    '.ppt', '.pptx', '.odp',          # 프레젠테이션
+    '.pdf',                            # PDF (이미 변환된 파일)
+    '.txt',
+    '.md',
+    '.html', '.htm',
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'  # 이미지
+}캐시 관리
 - LibreOffice 문서 변환
 - Redis 캐시 작업
 """
@@ -30,7 +40,7 @@ SUPPORTED_EXTENSIONS = {
     '.pdf',                            # PDF (이미 변환된 파일)
     '.txt',
     '.md',
-    '.html', '.htm'
+    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp'
 }
 # pdf나 html로 변환가능한 확장자
 CONVERTABLE_EXTENSIONS =  {
@@ -286,7 +296,7 @@ def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
             detail=f"문서 변환 중 오류 발생: {str(e)}"
         )
 
-def convert_to_html(input_path: Path, CONVERTED_DIR: Path) -> Path:
+def convert_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename: str = None) -> Path:
     """
     LibreOffice를 사용해 파일을 HTML로 변환
     특정 파일 타입은 전용 변환 함수 사용 (한글 인코딩 문제 해결)
@@ -306,19 +316,19 @@ def convert_to_html(input_path: Path, CONVERTED_DIR: Path) -> Path:
     
     # 파일 타입별 전용 변환 함수 사용
     if input_path.suffix.lower() == '.csv':
-        return convert_csv_to_html(input_path, html_path)
+        return convert_csv_to_html(input_path, html_path, original_filename)
     elif input_path.suffix.lower() == '.txt':
-        return convert_txt_to_html(input_path, html_path)
+        return convert_txt_to_html(input_path, html_path, original_filename)
     elif input_path.suffix.lower() in {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}:
-        return convert_image_to_html(input_path, html_path)
+        return convert_image_to_html(input_path, html_path, original_filename)
     elif input_path.suffix.lower() == '.md':
-        return convert_md_to_html(input_path, html_path)
+        return convert_md_to_html(input_path, html_path, original_filename)
     
     # 그 외 파일들은 LibreOffice 사용
     return convert_with_libreoffice(input_path, html_path)
 
 
-def convert_csv_to_html(csv_path: Path, html_path: Path) -> Path:
+def convert_csv_to_html(csv_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     CSV 파일을 pandas를 사용해서 HTML로 변환 (한글 인코딩 문제 해결)
     Jinja2 템플릿 사용
@@ -344,39 +354,28 @@ def convert_csv_to_html(csv_path: Path, html_path: Path) -> Path:
             raise ValueError("CSV 파일을 읽을 수 없습니다. 지원되는 인코딩이 없습니다.")
         
         # DataFrame을 HTML 테이블로 변환 (한글 지원 개선)
-        # pandas to_html의 한글 처리 문제를 해결하기 위해 직접 HTML 생성
-        html_table_rows = []
-        
-        # 헤더 생성
-        header_cells = [f"<th>{col}</th>" for col in df.columns]
-        html_table_rows.append(f"<tr>{''.join(header_cells)}</tr>")
-        
-        # 데이터 행 생성
-        for idx, row in df.iterrows():
-            data_cells = [f"<td>{str(value)}</td>" for value in row]
-            row_class = "even" if idx % 2 == 0 else "odd"
-            html_table_rows.append(f"<tr class='{row_class}'>{''.join(data_cells)}</tr>")
-        
-        table_html = f"""
-        <table class="csv-table" id="csvTable">
-            <thead>
-                {html_table_rows[0]}
-            </thead>
-            <tbody>
-                {''.join(html_table_rows[1:])}
-            </tbody>
-        </table>
-        """
+        # pandas to_html 사용하되 escape=False로 설정하여 한글 문제 해결
+        table_html = df.to_html(
+            table_id="csvTable",
+            classes="csv-table table table-striped table-hover",
+            escape=False,
+            index=False,
+            border=0
+        )
         
         # Jinja2 템플릿 로드
-        from app.config import settings
-        template_dir = Path(settings.BASE_DIR) / "app" / "templates"
-        env = Environment(loader=FileSystemLoader(template_dir))
+        import os
+        # 현재 파일의 디렉토리에서 templates 폴더 찾기
+        current_dir = Path(__file__).parent  # app 디렉토리
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
         template = env.get_template('viewer/csv.html')
         
         # 템플릿 렌더링
+        display_filename = original_filename if original_filename else csv_path.name
         html_content = template.render(
-            filename=csv_path.name,
+            filename=display_filename,
+            original_filename=display_filename,
             row_count=len(df),
             col_count=len(df.columns),
             table_html=table_html
@@ -399,7 +398,7 @@ def convert_csv_to_html(csv_path: Path, html_path: Path) -> Path:
         return convert_with_libreoffice(csv_path, html_path)
 
 
-def convert_txt_to_html(txt_path: Path, html_path: Path) -> Path:
+def convert_txt_to_html(txt_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     텍스트 파일을 HTML로 변환 (한글 인코딩 문제 해결)
     Jinja2 템플릿 사용
@@ -445,9 +444,11 @@ def convert_txt_to_html(txt_path: Path, html_path: Path) -> Path:
             line_numbers = '<br/>'.join(str(i+1) for i in range(line_count))
         
         # Jinja2 템플릿 로드
-        from app.config import settings
-        template_dir = Path(settings.BASE_DIR) / "app" / "templates"
-        env = Environment(loader=FileSystemLoader(template_dir))
+        import os
+        # 현재 파일의 디렉토리에서 templates 폴더 찾기
+        current_dir = Path(__file__).parent  # app 디렉토리
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
         
         # 숫자 포매팅 필터 추가
         def number_format(value):
@@ -457,8 +458,10 @@ def convert_txt_to_html(txt_path: Path, html_path: Path) -> Path:
         template = env.get_template('viewer/txt.html')
         
         # 템플릿 렌더링
+        display_filename = original_filename if original_filename else txt_path.name
         html_content = template.render(
-            filename=txt_path.name,
+            filename=display_filename,
+            original_filename=display_filename,
             line_count=line_count,
             char_count=len(content),
             encoding=used_encoding,
@@ -480,17 +483,138 @@ def convert_txt_to_html(txt_path: Path, html_path: Path) -> Path:
         return convert_with_libreoffice(txt_path, html_path)
 
 
-def convert_image_to_html(image_path: Path, html_path: Path) -> Path:
+def convert_image_to_html(image_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
-    이미지 파일을 HTML로 변환 (뷰어 형태)
+    이미지 파일을 HTML로 변환 (Viewer.js 기반 뷰어)
     Returns: 변환된 HTML 파일 경로
     """
-    # TODO: 이미지 변환 함수 구현 예정
-    logger.warning(f"이미지 변환 기능은 아직 구현되지 않았습니다: {image_path}")
-    return convert_with_libreoffice(image_path, html_path)
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        from PIL import Image
+        import os
+        
+        # 이미지 정보 추출
+        try:
+            with Image.open(image_path) as img:
+                width, height = img.size
+                format_name = img.format
+                mode = img.mode
+                
+                # EXIF 데이터 추출 (있는 경우)
+                exif_data = {}
+                if hasattr(img, '_getexif') and img._getexif():
+                    exif = img._getexif()
+                    if exif:
+                        # 주요 EXIF 태그들
+                        exif_tags = {
+                            271: 'Camera Make', 272: 'Camera Model', 
+                            306: 'DateTime', 33434: 'Exposure Time',
+                            33437: 'F Number', 34855: 'ISO Speed'
+                        }
+                        for tag_id, value in exif.items():
+                            if tag_id in exif_tags:
+                                exif_data[exif_tags[tag_id]] = str(value)
+        except Exception as e:
+            logger.warning(f"이미지 정보 추출 실패: {e}")
+            width = height = 0
+            format_name = "Unknown"
+            mode = "Unknown"
+            exif_data = {}
+        
+        # 파일 크기
+        file_size = image_path.stat().st_size
+        file_size_mb = file_size / (1024 * 1024)
+        
+        # 이미지 파일의 상대 경로 생성 (정적 파일 서빙용)
+        # 실제 구현에서는 이미지 파일을 정적 디렉토리로 복사하거나 링크 생성
+        image_filename = image_path.name
+        
+        # Jinja2 템플릿 로드
+        current_dir = Path(__file__).parent  # app 디렉토리
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        template = env.get_template('viewer/image.html')
+        
+        # 템플릿 렌더링
+        display_filename = original_filename if original_filename else image_path.name
+        html_content = template.render(
+            filename=display_filename,
+            original_filename=display_filename,
+            image_path=str(image_path),  # 절대 경로
+            image_filename=image_filename,
+            width=width,
+            height=height,
+            format=format_name,
+            mode=mode,
+            file_size=file_size,
+            file_size_mb=round(file_size_mb, 2),
+            exif_data=exif_data
+        )
+        
+        # HTML 파일로 저장 (UTF-8 인코딩)
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"이미지를 HTML로 변환 완료: {image_path} -> {html_path}")
+        return html_path
+        
+    except ImportError:
+        # PIL이 없는 경우 기본 구현
+        logger.warning("Pillow가 설치되지 않아 기본 이미지 뷰어를 사용합니다")
+        return convert_basic_image_to_html(image_path, html_path, original_filename)
+    except Exception as e:
+        logger.error(f"이미지를 HTML로 변환 실패: {str(e)}")
+        # 실패 시 LibreOffice 사용
+        return convert_with_libreoffice(image_path, html_path)
 
 
-def convert_md_to_html(md_path: Path, html_path: Path) -> Path:
+def convert_basic_image_to_html(image_path: Path, html_path: Path, original_filename: str = None) -> Path:
+    """
+    기본 이미지 HTML 변환 (PIL 없이)
+    """
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        
+        # 기본 파일 정보
+        file_size = image_path.stat().st_size
+        file_size_mb = file_size / (1024 * 1024)
+        image_filename = image_path.name
+        
+        # Jinja2 템플릿 로드
+        current_dir = Path(__file__).parent
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        template = env.get_template('viewer/image.html')
+        
+        # 템플릿 렌더링 (기본값들)
+        display_filename = original_filename if original_filename else image_path.name
+        html_content = template.render(
+            filename=display_filename,
+            original_filename=display_filename,
+            image_path=str(image_path),
+            image_filename=image_filename,
+            width=0,
+            height=0,
+            format="Unknown",
+            mode="Unknown",
+            file_size=file_size,
+            file_size_mb=round(file_size_mb, 2),
+            exif_data={}
+        )
+        
+        # HTML 파일로 저장
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"이미지를 기본 HTML로 변환 완료: {image_path} -> {html_path}")
+        return html_path
+        
+    except Exception as e:
+        logger.error(f"기본 이미지 HTML 변환 실패: {str(e)}")
+        return convert_with_libreoffice(image_path, html_path)
+
+
+def convert_md_to_html(md_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     마크다운 파일을 HTML로 변환
     Returns: 변환된 HTML 파일 경로  
@@ -595,7 +719,7 @@ async def url_download_and_convert(redis_client: redis.Redis, url: str, output_f
 
     elif output_format.lower().endswith('html'):
         file_path, original_filename = await download_and_cache_file(redis_client, url, settings)
-        output_path = convert_to_html(file_path, converted_dir)
+        output_path = convert_to_html(file_path, converted_dir, original_filename)
     
     logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
     url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
@@ -615,7 +739,7 @@ async def local_file_copy_and_convert(redis_client: redis.Redis, path: str, outp
 
     elif output_format.lower().endswith('html'):
         file_path, original_filename = await copy_and_cache_file(path, redis_client, settings)
-        output_path = convert_to_html(file_path, converted_dir)
+        output_path = convert_to_html(file_path, converted_dir, original_filename)
 
     logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
     url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"

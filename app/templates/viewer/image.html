@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이미지 파일 - {{ filename }}</title>
+    <title>이미지 뷰어 - {{ filename }}</title>
+    <!-- Viewer.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">
     <style>
         body { 
             font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif; 
@@ -16,79 +18,335 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-align: center;
+            max-width: 100%;
+            margin: 0 auto;
         }
         .image-header {
-            color: #495057;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 10px;
+            padding-bottom: 15px;
             border-bottom: 2px solid #dee2e6;
         }
         .image-title {
-            font-size: 1.3em;
+            color: #495057;
+            font-size: 1.2em;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin: 0;
         }
-        .image-info {
-            color: #6c757d;
-            font-size: 0.9em;
+        .image-toolbar {
+            display: flex;
+            gap: 8px;
             margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
-        .image-content {
-            max-width: 100%;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        .toolbar-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .toolbar-btn:hover {
+            background: #0056b3;
+        }
+        .toolbar-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
         }
         .image-viewer {
-            max-width: 100%;
-            height: auto;
-            cursor: pointer;
-            transition: transform 0.2s;
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            background: #fafafa;
         }
-        .image-viewer:hover {
-            transform: scale(1.02);
+        .image-viewer img {
+            max-width: 100%;
+            max-height: 70vh;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        .image-info {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            font-size: 0.9em;
+        }
+        .info-value {
+            color: #6c757d;
+            margin-top: 2px;
+        }
+        .exif-section {
+            margin-top: 20px;
+        }
+        .exif-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .exif-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 8px;
+        }
+        .exif-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .exif-key {
+            font-weight: 500;
+            color: #495057;
+        }
+        .exif-value {
+            color: #6c757d;
+        }
+        .no-exif {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        .placeholder-image {
+            width: 400px;
+            height: 300px;
+            background: linear-gradient(45deg, #f8f9fa 25%, transparent 25%), 
+                        linear-gradient(-45deg, #f8f9fa 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #f8f9fa 75%), 
+                        linear-gradient(-45deg, transparent 75%, #f8f9fa 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #6c757d;
+            font-size: 16px;
+            max-width: 100%;
+        }
+        
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .image-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .image-toolbar {
+                justify-content: flex-start;
+            }
+            .toolbar-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="image-container">
         <div class="image-header">
-            <div class="image-title">
-                🖼️ {{ filename }}
-            </div>
-            <div class="image-info">
-                크기: {{ width }}×{{ height }} | 파일 크기: {{ file_size }} | 포맷: {{ format }}
-            </div>
+            <h1 class="image-title">🖼️ {{ filename }}</h1>
         </div>
-        <div class="image-content">
-            <img src="{{ image_url }}" alt="{{ filename }}" class="image-viewer" onclick="toggleFullscreen(this)">
+        
+        <!-- 이미지 뷰어 툴바 -->
+        <div class="image-toolbar">
+            <button class="toolbar-btn" onclick="viewer.zoomIn()" title="확대">🔍+ 확대</button>
+            <button class="toolbar-btn" onclick="viewer.zoomOut()" title="축소">🔍- 축소</button>
+            <button class="toolbar-btn" onclick="viewer.rotate(90)" title="시계방향 90도 회전">🔄 회전</button>
+            <button class="toolbar-btn" onclick="viewer.rotate(-90)" title="반시계방향 90도 회전">↻ 역회전</button>
+            <button class="toolbar-btn" onclick="viewer.reset()" title="원본 크기로 복원">↺ 리셋</button>
+            <button class="toolbar-btn" onclick="viewer.full()" title="전체화면">⛶ 전체화면</button>
+        </div>
+        
+        <!-- 이미지 뷰어 -->
+        <div class="image-viewer">
+            <div class="placeholder-image" id="image-placeholder">
+                <div>📁 이미지 로딩 중...</div>
+                <div style="font-size: 12px; margin-top: 10px;">{{ filename }}</div>
+                <div style="font-size: 10px; margin-top: 5px; word-break: break-all;">{{ image_path }}</div>
+            </div>
+            <img id="image" src="" alt="{{ filename }}" style="display: none;" data-original="{{ image_path }}">
+        </div>
+        
+        <!-- 이미지 정보 -->
+        <div class="image-info">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">파일명</div>
+                    <div class="info-value">{{ filename }}</div>
+                </div>
+                {% if width > 0 and height > 0 %}
+                <div class="info-item">
+                    <div class="info-label">해상도</div>
+                    <div class="info-value">{{ width }} × {{ height }} 픽셀</div>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <div class="info-label">파일 형식</div>
+                    <div class="info-value">{{ format }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">색상 모드</div>
+                    <div class="info-value">{{ mode }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">파일 크기</div>
+                    <div class="info-value">{{ file_size_mb }} MB ({{ "{:,}".format(file_size) }} bytes)</div>
+                </div>
+            </div>
+            
+            <!-- EXIF 정보 -->
+            {% if exif_data %}
+            <div class="exif-section">
+                <div class="exif-title">📸 EXIF 정보</div>
+                <div class="exif-grid">
+                    {% for key, value in exif_data.items() %}
+                    <div class="exif-item">
+                        <span class="exif-key">{{ key }}</span>
+                        <span class="exif-value">{{ value }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="exif-section">
+                <div class="exif-title">📸 EXIF 정보</div>
+                <div class="no-exif">EXIF 정보가 없습니다</div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
+    <!-- Viewer.js JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
     <script>
-        function toggleFullscreen(img) {
-            if (img.style.position === 'fixed') {
-                // 원래 크기로 복귀
-                img.style.position = '';
-                img.style.top = '';
-                img.style.left = '';
-                img.style.width = '';
-                img.style.height = '';
-                img.style.zIndex = '';
-                img.style.backgroundColor = '';
-                img.style.objectFit = '';
-            } else {
-                // 전체화면 모드
-                img.style.position = 'fixed';
-                img.style.top = '0';
-                img.style.left = '0';
-                img.style.width = '100vw';
-                img.style.height = '100vh';
-                img.style.zIndex = '9999';
-                img.style.backgroundColor = 'rgba(0,0,0,0.9)';
-                img.style.objectFit = 'contain';
+        // 이미지 로딩 및 Viewer.js 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageElement = document.getElementById('image');
+            const placeholderElement = document.getElementById('image-placeholder');
+            const imagePath = imageElement.getAttribute('data-original');
+            
+            if (imagePath) {
+                // 실제 이미지 API URL 생성
+                const imageUrl = '/image?path=' + encodeURIComponent(imagePath);
+                
+                // 이미지 로딩
+                const img = new Image();
+                img.onload = function() {
+                    // 이미지 로딩 성공
+                    imageElement.src = imageUrl;
+                    imageElement.style.display = 'block';
+                    placeholderElement.style.display = 'none';
+                    
+                    // Viewer.js 초기화
+                    initializeViewer();
+                };
+                
+                img.onerror = function() {
+                    // 이미지 로딩 실패
+                    placeholderElement.innerHTML = `
+                        <div>❌ 이미지 로딩 실패</div>
+                        <div style="font-size: 12px; margin-top: 10px;">{{ filename }}</div>
+                        <div style="font-size: 10px; margin-top: 5px; color: #dc3545;">경로: ${imagePath}</div>
+                    `;
+                };
+                
+                img.src = imageUrl;
             }
-        }
+            
+            function initializeViewer() {
+                // Viewer.js 초기화
+                window.viewer = new Viewer(imageElement, {
+                    inline: false,
+                    viewed() {
+                        console.log('이미지가 뷰어에 로드되었습니다.');
+                    },
+                    toolbar: {
+                        zoomIn: 1,
+                        zoomOut: 1,
+                        oneToOne: 1,
+                        reset: 1,
+                        prev: 0,
+                        play: 0,
+                        next: 0,
+                        rotateLeft: 1,
+                        rotateRight: 1,
+                        flipHorizontal: 1,
+                        flipVertical: 1
+                    },
+                    title: function (image) {
+                        return `{{ filename }} (${image.naturalWidth} × ${image.naturalHeight})`;
+                    }
+                });
+            }
+        });
+        
+        // 키보드 단축키
+        document.addEventListener('keydown', function(e) {
+            if (!window.viewer) return;
+            
+            switch(e.key) {
+                case '+':
+                case '=':
+                    e.preventDefault();
+                    viewer.zoomIn();
+                    break;
+                case '-':
+                    e.preventDefault();
+                    viewer.zoomOut();
+                    break;
+                case 'r':
+                case 'R':
+                    e.preventDefault();
+                    viewer.rotate(90);
+                    break;
+                case 'Escape':
+                    e.preventDefault();
+                    viewer.hide();
+                    break;
+                case 'f':
+                case 'F':
+                    e.preventDefault();
+                    viewer.full();
+                    break;
+            }
+        });
     </script>
 </body>
 </html>
