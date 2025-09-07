@@ -20,7 +20,7 @@
 | convert | 오피스파일                          | 사용자지정 | JSON      |
 | view    | 오피스파일 외 이미지, Markdown, CSV, Text 등 | 대상에 따라 자동 | Web Page |
 
-### convert
+### API convert
 
 1. get, post 지원
 2. param
@@ -41,7 +41,7 @@
     {"success":false,"url":"","message":"입력 오류: 1 validation error for ConvertParams\npath\n  Value error, 파일이 존재하지 않습니다: c:\\tmp\\sample\\aa.docx [type=value_error, input_value='c:\\\\tmp\\\\sample\\\\aa.docx', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.11/v/value_error"}    
    ```
 
-### view
+### API view
 
 1. get방식만 제공
 2. param : url or path  : url로 파일을 지정, path는 동일 서버에 사용자 웹서비스와 a-view서비스가 존재하고 물리적 disk를 공유시 사용가능
@@ -83,6 +83,10 @@ a-view는 assertERP 시스템에서 호출한다. 즉 AssetERP에서   localhost
 http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xlsx
 ```
 
+## 설치
+
+1. [radis](https://redis.io/)를 cache 용으로 사용함.
+2. [libreoffice](https://www.libreoffice.org/) 를 다운해서 설치 
 
 ## redis
 
@@ -94,3 +98,14 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
   docekr rm redis-aview
   docker run -d --name redis-aview -p 6379:6379 redis:latest
   ```
+
+## 고려해 볼 점
+
+1. index.html을 dashboard로 사용
+2. redis로 통계 데이터를 가져갈 수 있을까?
+   1. 일별 처리 횟수
+   2. 파일 확장자별 횟수
+3. 로그 보기
+4. cache에 있는 파일들 리스트 및 다운로드
+5. aview-test.html로 테스트하기
+6. 스트레스 테스트를 해 볼 수 있을까?
