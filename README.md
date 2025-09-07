@@ -94,7 +94,7 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
   ```bash
   docker ps
   docker stop redis-aview
-  docker run =d --name redis-aview -p 6379:6379 redis:latest
+  docker run -d --name redis-aview -p 6379:6379 redis:latest
   docekr rm redis-aview
   docker run -d --name redis-aview -p 6379:6379 redis:latest
   ```
