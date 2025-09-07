@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-View 관리자 대시보드</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        .stat-card {
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .status-badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4" x-data="dashboardApp()">
+        <!-- 헤더 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1>📊 A-View 관리자 대시보드</h1>
+                    <div>
+                        <span class="badge bg-info me-2">서버 시간: <span x-text="currentTime"></span></span>
+                        <button class="btn btn-sm btn-outline-primary" @click="refreshData">
+                            🔄 새로고침
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 시스템 상태 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Redis 상태</h6>
+                        <div class="d-flex align-items-center">
+                            <span class="status-badge badge" 
+                                  :class="systemStatus.redis ? 'bg-success' : 'bg-danger'">
+                                <span x-text="systemStatus.redis ? '✓ 연결됨' : '✗ 연결 안됨'"></span>
+                            </span>
+                        </div>
+                        <small class="text-muted" x-show="systemStatus.redis">
+                            메모리: <span x-text="systemStatus.redisMemory"></span>MB
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">SQLite DB</h6>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success">✓ 정상</span>
+                        </div>
+                        <small class="text-muted">
+                            크기: <span x-text="systemStatus.dbSize"></span>MB
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">LibreOffice</h6>
+                        <div class="d-flex align-items-center">
+                            <span class="badge" 
+                                  :class="systemStatus.libreOffice ? 'bg-success' : 'bg-warning'">
+                                <span x-text="systemStatus.libreOffice ? '✓ 사용가능' : '⚠ 확인필요'"></span>
+                            </span>
+                        </div>
+                        <small class="text-muted" x-text="systemStatus.libreVersion"></small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">캐시 디렉토리</h6>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info">
+                                <span x-text="systemStatus.cacheFiles"></span> 파일
+                            </span>
+                        </div>
+                        <small class="text-muted">
+                            용량: <span x-text="systemStatus.cacheSize"></span>MB
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 기간 선택 및 필터 -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <label class="form-label">통계 기간</label>
+                        <select class="form-select" x-model="period" @change="loadStats()">
+                            <option value="today">오늘</option>
+                            <option value="7">최근 7일</option>
+                            <option value="30">최근 30일</option>
+                            <option value="90">최근 90일</option>
+                            <option value="custom">기간 지정</option>
+                        </select>
+                        <div x-show="period === 'custom'" class="mt-2">
+                            <input type="date" class="form-control mb-2" x-model="customStart">
+                            <input type="date" class="form-control" x-model="customEnd">
+                            <button class="btn btn-sm btn-primary mt-2" @click="loadStats()">조회</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <label class="form-label">데이터 내보내기</label>
+                        <div class="btn-group w-100">
+                            <button class="btn btn-outline-primary" @click="exportData('json')">
+                                📄 JSON
+                            </button>
+                            <button class="btn btn-outline-success" @click="exportData('csv')">
+                                📊 CSV
+                            </button>
+                            <button class="btn btn-outline-danger" @click="exportData('pdf')">
+                                📑 PDF 리포트
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <label class="form-label">자동 새로고침</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" x-model="autoRefresh" @change="toggleAutoRefresh()">
+                            <label class="form-check-label">
+                                <span x-text="autoRefresh ? '활성화 (30초)' : '비활성화'"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 주요 지표 -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="card text-center stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">총 변환수</h6>
+                        <h3 class="text-primary" x-text="formatNumber(stats.total_conversions || 0)"></h3>
+                        <small :class="stats.trend_conversions > 0 ? 'text-success' : 'text-danger'">
+                            <span x-text="stats.trend_conversions > 0 ? '↑' : '↓'"></span>
+                            <span x-text="Math.abs(stats.trend_conversions || 0)"></span>%
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">캐시 적중률</h6>
+                        <h3 class="text-success" x-text="(stats.cache_hit_rate || 0).toFixed(1) + '%'"></h3>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" :style="`width: ${stats.cache_hit_rate}%`"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">평균 변환시간</h6>
+                        <h3 class="text-info" x-text="(stats.avg_conversion_time || 0).toFixed(2) + 's'"></h3>
+                        <small class="text-muted">
+                            최대: <span x-text="(stats.max_conversion_time || 0).toFixed(2)"></span>s
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">처리 용량</h6>
+                        <h3 class="text-warning" x-text="formatSize(stats.total_size_mb || 0)"></h3>
+                        <small class="text-muted">
+                            평균: <span x-text="formatSize(stats.avg_size_mb || 0)"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">고유 파일수</h6>
+                        <h3 class="text-secondary" x-text="formatNumber(stats.unique_files || 0)"></h3>
+                        <small class="text-muted">
+                            재사용: <span x-text="stats.reuse_rate || 0"></span>%
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">에러율</h6>
+                        <h3 :class="(stats.error_rate || 0) > 5 ? 'text-danger' : 'text-success'" 
+                            x-text="(stats.error_rate || 0).toFixed(2) + '%'"></h3>
+                        <small class="text-muted">
+                            <span x-text="stats.error_count || 0"></span> 건
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 차트 영역 -->
+        <div class="row mb-4">
+            <!-- 시계열 차트 -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <h5>일별 변환 추이</h5>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" 
+                                    :class="chartView === 'count' ? 'active' : ''"
+                                    @click="switchChartView('count')">건수</button>
+                            <button class="btn btn-outline-secondary"
+                                    :class="chartView === 'size' ? 'active' : ''"
+                                    @click="switchChartView('size')">용량</button>
+                            <button class="btn btn-outline-secondary"
+                                    :class="chartView === 'time' ? 'active' : ''"
+                                    @click="switchChartView('time')">시간</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="dailyTrendChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 파일 타입 분포 -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>파일 타입별 분포</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="fileTypeChart"></canvas>
+                        <div class="mt-3" style="max-height: 200px; overflow-y: auto;">
+                            <template x-for="(type, index) in Object.entries(stats.file_types || {})" :key="type[0]">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge" :style="`background-color: ${getColor(index)}`">
+                                        <span x-text="type[0]"></span>
+                                    </span>
+                                    <small>
+                                        <span x-text="type[1].count"></span> 건
+                                        (<span x-text="formatSize(type[1].size_mb)"></span>)
+                                    </small>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 추가 차트 -->
+        <div class="row mb-4">
+            <!-- 시간대별 분포 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>시간대별 사용 패턴</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 출력 형식 비교 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>변환 형식 비교 (PDF vs HTML)</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="outputFormatChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 테이블 영역 -->
+        <div class="row mb-4">
+            <!-- TOP 10 파일 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <h5>자주 변환된 파일 TOP 10</h5>
+                        <button class="btn btn-sm btn-outline-secondary" @click="loadTopFiles()">갱신</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="50%">파일명</th>
+                                        <th width="15%">타입</th>
+                                        <th width="15%">횟수</th>
+                                        <th width="15%">최근</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(file, index) in stats.top_files" :key="file.source_value">
+                                        <tr>
+                                            <td x-text="index + 1"></td>
+                                            <td class="text-truncate" style="max-width: 200px" 
+                                                :title="file.file_name">
+                                                <small x-text="file.file_name || file.source_value"></small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary" x-text="file.file_type"></span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary" x-text="file.conversion_count"></span>
+                                            </td>
+                                            <td>
+                                                <small x-text="formatTime(file.last_converted)"></small>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 최근 에러 -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <h5>최근 에러 로그</h5>
+                        <span class="badge bg-danger" x-text="(stats.errors || []).length"></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="20%">시간</th>
+                                        <th width="15%">타입</th>
+                                        <th width="50%">에러</th>
+                                        <th width="15%">횟수</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="error in stats.errors" :key="error.date + error.error_message">
+                                        <tr>
+                                            <td>
+                                                <small x-text="formatTime(error.date)"></small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-warning text-dark" x-text="error.file_type || 'N/A'"></span>
+                                            </td>
+                                            <td class="text-truncate" style="max-width: 200px" 
+                                                :title="error.error_message">
+                                                <small x-text="error.error_message"></small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-danger" x-text="error.count"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 캐시 효율성 & 시스템 정보 -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>캐시 효율성 분석</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong>캐시 적중 횟수:</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="badge bg-success" x-text="formatNumber(stats.cache_effectiveness?.cache_hits || 0)"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong>절약된 변환 시간:</strong>
+                            </div>
+                            <div class="col-6">
+                                <span x-text="formatDuration(stats.cache_effectiveness?.time_saved || 0)"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong>절약된 대역폭:</strong>
+                            </div>
+                            <div class="col-6">
+                                <span x-text="formatSize(stats.cache_effectiveness?.bandwidth_saved_mb || 0)"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong>예상 비용 절감:</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-success">
+                                    ₩<span x-text="formatNumber(calculateCostSaving())"></span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar bg-gradient" 
+                                 :class="getCacheRateClass()"
+                                 :style="`width: ${stats.cache_effectiveness?.hit_rate || 0}%`">
+                                <strong x-text="`캐시 적중률: ${(stats.cache_effectiveness?.hit_rate || 0).toFixed(1)}%`"></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>시스템 리소스</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label>디스크 사용량</label>
+                            <div class="progress">
+                                <div class="progress-bar" :style="`width: ${systemStatus.diskUsage}%`">
+                                    <span x-text="`${systemStatus.diskUsage}%`"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label>캐시 메모리</label>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" :style="`width: ${systemStatus.cacheUsage}%`">
+                                    <span x-text="`${systemStatus.cacheUsage}%`"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-end mt-3">
+                            <button class="btn btn-sm btn-warning" @click="cleanupCache()">
+                                🧹 캐시 정리
+                            </button>
+                            <button class="btn btn-sm btn-danger" @click="cleanupOldData()">
+                                🗑️ 오래된 데이터 삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function dashboardApp() {
+        return {
+            period: '7',
+            customStart: '',
+            customEnd: '',
+            chartView: 'count',
+            autoRefresh: false,
+            autoRefreshInterval: null,
+            currentTime: '',
+            stats: {},
+            systemStatus: {
+                redis: false,
+                libreOffice: true,
+                dbSize: 0,
+                cacheFiles: 0,
+                cacheSize: 0,
+                diskUsage: 0,
+                cacheUsage: 0
+            },
+            charts: {},
+            
+            async init() {
+                this.updateTime();
+                setInterval(() => this.updateTime(), 1000);
+                
+                await this.loadSystemStatus();
+                await this.loadStats();
+                this.initCharts();
+            },
+            
+            updateTime() {
+                this.currentTime = new Date().toLocaleString('ko-KR');
+            },
+            
+            async loadSystemStatus() {
+                try {
+                    const response = await fetch('/api/system/status');
+                    const data = await response.json();
+                    this.systemStatus = data;
+                } catch (error) {
+                    console.error('시스템 상태 로드 실패:', error);
+                }
+            },
+            
+            async loadStats() {
+                try {
+                    let url = `/stats/dashboard?days=${this.period}`;
+                    if (this.period === 'custom' && this.customStart && this.customEnd) {
+                        url = `/stats/dashboard?start_date=${this.customStart}&end_date=${this.customEnd}`;
+                    } else if (this.period === 'today') {
+                        url = '/stats/dashboard?days=1';
+                    }
+                    
+                    const response = await fetch(url);
+                    this.stats = await response.json();
+                    this.updateCharts();
+                } catch (error) {
+                    console.error('통계 로드 실패:', error);
+                }
+            },
+            
+            initCharts() {
+                // 일별 추이 차트
+                this.charts.daily = new Chart(document.getElementById('dailyTrendChart'), {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: '변환 건수',
+                            data: [],
+                            borderColor: '#36A2EB',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.3
+                        }, {
+                            label: '캐시 적중',
+                            data: [],
+                            borderColor: '#4BC0C0',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+                
+                // 파일 타입 차트
+                this.charts.fileType = new Chart(document.getElementById('fileTypeChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            data: [],
+                            backgroundColor: [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                                '#9966FF', '#FF9F40', '#FF6B6B', '#C9CBCF'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+                
+                // 시간대별 차트
+                this.charts.hourly = new Chart(document.getElementById('hourlyChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: Array.from({length: 24}, (_, i) => `${i}시`),
+                        datasets: [{
+                            label: '변환 횟수',
+                            data: [],
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: '#36A2EB',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+                
+                // 출력 형식 차트
+                this.charts.outputFormat = new Chart(document.getElementById('outputFormatChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['PDF', 'HTML'],
+                        datasets: [{
+                            label: '변환 건수',
+                            data: [],
+                            backgroundColor: ['#FF6384', '#36A2EB']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            },
+            
+            updateCharts() {
+                // 파일 타입 차트 업데이트
+                if (this.stats.file_types) {
+                    const types = Object.keys(this.stats.file_types);
+                    const counts = types.map(t => this.stats.file_types[t].count);
+                    
+                    this.charts.fileType.data.labels = types;
+                    this.charts.fileType.data.datasets[0].data = counts;
+                    this.charts.fileType.update();
+                }
+                
+                // 시간대별 차트 업데이트
+                if (this.stats.hourly_distribution) {
+                    const hourlyData = Array(24).fill(0);
+                    Object.entries(this.stats.hourly_distribution).forEach(([hour, count]) => {
+                        hourlyData[parseInt(hour)] = count;
+                    });
+                    
+                    this.charts.hourly.data.datasets[0].data = hourlyData;
+                    this.charts.hourly.update();
+                }
+                
+                // 출력 형식 차트 업데이트
+                if (this.stats.output_formats) {
+                    this.charts.outputFormat.data.datasets[0].data = [
+                        this.stats.output_formats.pdf || 0,
+                        this.stats.output_formats.html || 0
+                    ];
+                    this.charts.outputFormat.update();
+                }
+            },
+            
+            switchChartView(view) {
+                this.chartView = view;
+                // 차트 데이터 전환 로직
+            },
+            
+            toggleAutoRefresh() {
+                if (this.autoRefresh) {
+                    this.autoRefreshInterval = setInterval(() => {
+                        this.refreshData();
+                    }, 30000);
+                } else {
+                    clearInterval(this.autoRefreshInterval);
+                }
+            },
+            
+            async refreshData() {
+                await this.loadSystemStatus();
+                await this.loadStats();
+            },
+            
+            async loadTopFiles() {
+                // TOP 파일 목록 갱신
+                await this.loadStats();
+            },
