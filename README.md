@@ -109,3 +109,4 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
 4. cache에 있는 파일들 리스트 및 다운로드
 5. aview-test.html로 테스트하기
 6. 스트레스 테스트를 해 볼 수 있을까?
+7. favicorn 넣기
