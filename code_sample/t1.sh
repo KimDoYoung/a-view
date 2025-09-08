@@ -2,7 +2,9 @@
 
 echo "Starting conversion process..."
 start_time=$(date +%s)
-
+echo "----------------------------------------------------"
+echo "convert"
+echo "----------------------------------------------------"
 curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\11.docx&output=pdf"
 echo "------------"
 curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\22.xlsx&output=pdf"
@@ -16,6 +18,38 @@ echo "------------"
 curl "http://localhost:8003/convert?url=http://localhost:8003/static/files/AssetERP/1.docx&output=pdf"
 echo "------------"
 curl "http://localhost:8003/convert?url=http://localhost:8003/static/files/AssetERP/1.xlsx&output=html"   
+echo "----------------------------------------------------"
+echo "view"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/1.xlsx"
+echo "------------
+curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/1.docx"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?path=c:/tmp/sample/11.docx"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?path=c:/tmp/sample/22.xlsx"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?path=c:/tmp/sample/33.pptx"
+
+echo "----------------------------------------------------"
+echo " view image, md, txt, csv"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?path=c:/tmp/sample/1.png"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?path=c:/tmp/sample/1.md"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?path=c:/tmp/sample/a.txt"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?path=c:/tmp/sample/a.csv"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/1.jpg"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/a.csv"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/1.md"
+echo "----------------------------------------------------"
+curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/a.txt"
+
 
 end_time=$(date +%s)
 execution_time=$((end_time - start_time))
