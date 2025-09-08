@@ -102,7 +102,7 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
 ## 고려해 볼 점
 
 1. index.html을 dashboard로 사용
-2. redis로 통계 데이터를 가져갈 수 있을까?
+2. redis로 통계 데이터를 가져갈 수 있을까? 
    1. 일별 처리 횟수
    2. 파일 확장자별 횟수
 3. 로그 보기
@@ -111,3 +111,5 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
 6. 스트레스 테스트를 해 볼 수 있을까?
 7. favicorn 넣기
 8. nav에 version표시
+9. async_test3.py : 여러 사용자가 동시에 view or convert 를 보낸다고 가정해서 test하는 프로그램을 작성해서 볼 수 없을까?
+10. my_test.html을 작성

@@ -9,7 +9,7 @@ from typing import List, Dict, Any
 from contextlib import contextmanager
 import json
 
-from app.logger import get_logger
+from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
