@@ -34,6 +34,8 @@ class Config:
         self.CACHE_DIR = os.getenv('CACHE_DIR', f'{self.BASE_DIR}/cache')
         self.CONVERTED_DIR = f'{self.CACHE_DIR}/converted'
         self.CACHE_TTL = int(os.getenv('CACHE_TTL', '86400'))  # 24시간
+        # 통계 DB
+        self.STATS_DB_PATH = os.getenv('STATS_DB_PATH', f'{self.BASE_DIR}/db/aview_stats.db') 
         
         # LibreOffice 설정
         self.LIBREOFFICE_TIMEOUT = int(os.getenv('LIBREOFFICE_TIMEOUT', '60'))
@@ -67,7 +69,8 @@ class Config:
             self.BASE_DIR,
             self.CACHE_DIR,
             self.CONVERTED_DIR,
-            self.LOG_DIR
+            self.LOG_DIR,
+            self.STATS_DB_PATH.rsplit('/', 1)[0] if '/' in self.STATS_DB_PATH else self.STATS_DB_PATH.rsplit('\\', 1)[0]
     ]
         
         for directory in directories:

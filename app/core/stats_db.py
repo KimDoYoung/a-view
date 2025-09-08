@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 class StatsDatabase:
     """문서 변환 통계 데이터베이스"""
     
-    def __init__(self, db_path: str = "stats.db"):
+    def __init__(self, db_path: str = "aview_stats.db"):
         self.db_path = db_path
         self.init_database()
     
@@ -51,8 +51,6 @@ class StatsDatabase:
                     conversion_time REAL,  -- 변환 소요 시간(초)
                     cache_hit BOOLEAN DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    user_ip TEXT,
-                    user_agent TEXT,
                     success BOOLEAN DEFAULT 1,
                     error_message TEXT
                 )
@@ -98,8 +96,6 @@ class StatsDatabase:
                       output_format: str,
                       conversion_time: float,
                       cache_hit: bool = False,
-                      user_ip: str = None,
-                      user_agent: str = None,
                       success: bool = True,
                       error_message: str = None) -> int:
         """변환 작업 로깅"""
@@ -108,12 +104,12 @@ class StatsDatabase:
                 INSERT INTO conversions (
                     source_type, source_value, file_name, file_type,
                     file_size, output_format, conversion_time, cache_hit,
-                    user_ip, user_agent, success, error_message
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    success, error_message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 source_type, source_value, file_name, file_type,
                 file_size, output_format, conversion_time, cache_hit,
-                user_ip, user_agent, success, error_message
+                success, error_message
             ))
             
             # 일별 통계 업데이트 트리거
@@ -302,58 +298,5 @@ class StatsDatabase:
             return deleted
 
 
-# ===== 통계 API 라우트 예제 =====
-from fastapi import APIRouter, Query, Request
-from datetime import datetime, date
 
-stats_router = APIRouter(prefix="/stats", tags=["statistics"])
 
-@stats_router.get("/dashboard")
-async def stats_dashboard(request: Request, days: int = Query(7, ge=1, le=365)):
-    """통계 대시보드 데이터"""
-    db = request.app.state.stats_db
-    
-    return {
-        "period": days,
-        "file_types": db.get_file_type_stats(days),
-        "top_files": db.get_top_files(days),
-        "hourly_distribution": db.get_hourly_distribution(days),
-        "cache_effectiveness": db.get_cache_effectiveness(days),
-        "errors": db.get_error_stats(days)
-    }
-
-@stats_router.get("/daily/{date}")
-async def get_daily_stats(request: Request, date: date):
-    """특정 날짜 통계"""
-    db = request.app.state.stats_db
-    return db.get_daily_stats(date)
-
-@stats_router.get("/export")
-async def export_stats(
-    request: Request,
-    start_date: date = Query(...),
-    end_date: date = Query(...),
-    format: str = Query("json", regex="^(json|csv)$")
-):
-    """통계 데이터 내보내기"""
-    db = request.app.state.stats_db
-    stats = db.get_period_stats(start_date, end_date)
-    
-    if format == "csv":
-        import csv
-        import io
-        
-        output = io.StringIO()
-        if stats:
-            writer = csv.DictWriter(output, fieldnames=stats[0].keys())
-            writer.writeheader()
-            writer.writerows(stats)
-        
-        from fastapi.responses import Response
-        return Response(
-            content=output.getvalue(),
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=stats_{start_date}_{end_date}.csv"}
-        )
-    
-    return stats

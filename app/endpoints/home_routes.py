@@ -63,26 +63,24 @@ async def convert_document(
     - URL: /convert?url=https://example.com/file.pdf&output=html
     - 경로: /convert?path=c:\\myfolder\\1.docx&output=pdf
     """
-    redis_client = get_redis(request)
     try:
         # ConvertParams 생성 시 validation 오류 처리
         params = ConvertParams(url=url, path=path, output=output)
         
         if params.is_url_source:
             logger.info(f"URL에서 다운로드: {params.url}")
-            converted_url = await url_download_and_convert(redis_client,params.url, params.output)
-            
+            converted_url = await url_download_and_convert(request, params.url, params.output)
             return ConvertResponse.success_response(
                 url=converted_url,
                 message=f"URL 문서가 {params.output} 형식으로 변환되었습니다"
             )
         else:
             logger.info(f"로컬 파일 변환: {params.path}")
-            converted_url = await local_file_copy_and_convert(redis_client, params.path, params.output)
+            converted_url = await local_file_copy_and_convert(request, params.path, params.output)
             
             return ConvertResponse.success_response(
                 url=converted_url,
-                message=f"로칼 파일이 {params.output} 형식으로 변환되었습니다"
+                message=f"로컬 파일이 {params.output} 형식으로 변환되었습니다"
             )
             
     except ValueError as e:
@@ -101,13 +99,13 @@ async def convert_document(
 @router.post("/convert", response_model=ConvertResponse)
 async def convert_document_post(request: Request, convert_request: ConvertRequest) -> ConvertResponse:
     """POST 방식 변환"""
-    redis_client = get_redis(request)
+    # redis_client = get_redis(request)
     try:
         params = ConvertParams(**convert_request.model_dump())
         
         if params.is_url_source:
             logger.info(f"POST URL에서 다운로드: {params.url}")
-            converted_url = await url_download_and_convert(redis_client, params.url, params.output)
+            converted_url = await url_download_and_convert(request, params.url, params.output)
             
             return ConvertResponse.success_response(
                 url=converted_url,
@@ -115,7 +113,7 @@ async def convert_document_post(request: Request, convert_request: ConvertReques
             )
         else:
             logger.info(f"POST 로컬 파일 변환: {params.path}")
-            converted_url = await local_file_copy_and_convert(redis_client, params.path, params.output)
+            converted_url = await local_file_copy_and_convert(request, params.path, params.output)
             
             return ConvertResponse.success_response(
                 url=converted_url,

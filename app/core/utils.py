@@ -136,7 +136,7 @@ def validate_file_extension(filename: str) -> str:
         )
     return file_ext
 
-async def download_and_cache_file(redis_client: redis.Redis, url: str,  settings: Config) -> Tuple[Path, str]:
+async def download_and_cache_file(redis_client: redis.Redis, url: str,  settings: Config) -> Tuple[Path, str, bool]:
     """
     외부 URL에서 파일을 다운로드하고 캐시에 저장, 이미 캐쉬에 있으면 재사용
     Returns: (파일 경로, 원본 파일명)
@@ -150,8 +150,8 @@ async def download_and_cache_file(redis_client: redis.Redis, url: str,  settings
     if cached_info:
         cached_path = Path(cached_info.get('path', ''))
         if cached_path.exists():
-            return cached_path, cached_info.get('filename', 'unknown')
-    
+            return cached_path, cached_info.get('filename', 'unknown'), True
+
     # 파일 다운로드
     file_content, filename = await download_file_from_url(url)
     
@@ -181,9 +181,9 @@ async def download_and_cache_file(redis_client: redis.Redis, url: str,  settings
     })
     redis_client.expire(cache_key, 86400)  # 24시간
     
-    return cache_file_path, filename
+    return cache_file_path, filename, False
 
-async def copy_and_cache_file(path: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str]:
+async def copy_and_cache_file(path: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str, bool]:
     """
     로컬 파일을 캐시에 복사, 이미 캐쉬에 있으면 재사용
     Returns: (파일 경로, 원본 파일명)
@@ -206,8 +206,8 @@ async def copy_and_cache_file(path: str, redis_client: redis.Redis, settings: Co
     if cached_info:
         cached_path = Path(cached_info.get('path', ''))
         if cached_path.exists():
-            return cached_path, cached_info.get('filename', 'unknown')
-    
+            return cached_path, cached_info.get('filename', 'unknown'), True
+
     # 캐시 파일 저장 (비동기)
     url_hash = hashlib.md5(str(input_path.resolve()).encode()).hexdigest()
     cache_file_path = CACHE_DIR / f"{url_hash}{file_ext}"
@@ -236,8 +236,8 @@ async def copy_and_cache_file(path: str, redis_client: redis.Redis, settings: Co
         'ext': file_ext
     })
     redis_client.expire(cache_key, 86400)  # 24시간
-    
-    return cache_file_path, filename
+
+    return cache_file_path, filename, False
 
 async def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
     """
@@ -1021,41 +1021,75 @@ async def get_cached_pdf(redis_client: redis.Redis, url: str,  settings: Config)
     
     return pdf_path, original_filename
 
-async def url_download_and_convert(redis_client: redis.Redis, url: str, output_format: str) -> str:
+async def url_download_and_convert(request, url: str, output_format: str) -> str:
     """
     URL에서 파일을 다운로드하고 지정된 형식으로 변환 (비동기)
     Returns: 변환된 파일의 URL (임시로 생성된 URL)
     """
+    redis_client = request.app.state.redis
+    stats_manager = request.app.state.stats_db
+    start_time = time.time()
+
     converted_dir = Path(settings.CONVERTED_DIR)
     if output_format.lower().endswith('pdf'):
-        file_path, original_filename = await download_and_cache_file(redis_client, url, settings)
+        file_path, original_filename, cache_hit = await download_and_cache_file(redis_client, url, settings)
         output_path = await convert_to_pdf(file_path, converted_dir)
 
     elif output_format.lower().endswith('html'):
-        file_path, original_filename = await download_and_cache_file(redis_client, url, settings)
+        file_path, original_filename, cache_hit = await download_and_cache_file(redis_client, url, settings)
         output_path = await convert_to_html(file_path, converted_dir, original_filename)
     
     logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
     url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
     logger.info(f"변환된 파일 URL: {url}")
+    end_time = time.time()
+    conversion_time = end_time - start_time 
+    # 통계 DB에 기록
+    stats_manager.log_conversion(
+        source_type="url",
+        source_value=url,
+        file_name=output_path.name,
+        file_type=output_path.suffix[1:],
+        file_size=output_path.stat().st_size,
+        output_format=output_format,
+        conversion_time=conversion_time,
+        cache_hit=cache_hit
+    )
     return url
 
 
-async def local_file_copy_and_convert(redis_client: redis.Redis, path: str, output_format: str) -> str:
+async def local_file_copy_and_convert(request, path: str, output_format: str) -> str:
     """
     로컬 파일을 지정된 형식으로 변환 (비동기)
     Returns: 변환된 파일의 URL (임시로 생성된 URL)
     """
+    redis_client = request.app.state.redis
+    stats_manager = request.app.state.stats_db
+    start_time = time.time()
+
     converted_dir = Path(settings.CONVERTED_DIR)
     if output_format.lower().endswith('pdf'):
-        file_path, original_filename = await copy_and_cache_file(path, redis_client, settings)
+        file_path, original_filename, cache_hit = await copy_and_cache_file(path, redis_client, settings)
         output_path = await convert_to_pdf(file_path, converted_dir)
 
     elif output_format.lower().endswith('html'):
-        file_path, original_filename = await copy_and_cache_file(path, redis_client, settings)
+        file_path, original_filename, cache_hit = await copy_and_cache_file(path, redis_client, settings)
         output_path = await convert_to_html(file_path, converted_dir, original_filename)
 
     logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
     url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
     logger.info(f"변환된 파일 URL: {url}")
+    # 통계 DB에 기록
+    end_time = time.time()
+    conversion_time = end_time - start_time
+    stats_manager.log_conversion(
+        source_type="path",
+        source_value=path,
+        file_name=output_path.name,
+        file_type=output_path.suffix[1:],
+        file_size=output_path.stat().st_size,
+        output_format=output_format,
+        conversion_time=conversion_time,
+        cache_hit=cache_hit
+    )   
     return url

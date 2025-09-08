@@ -9,12 +9,14 @@ import redis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from app.core.stats_db import StatsDatabase
 from core.logger import get_logger
 from core.config import settings
 
 from endpoints.home_routes import router as home_router
 from endpoints.aview_routes import router as aview_router
 from endpoints.cache_routes import router as cache_router
+from endpoints.stats_routes import router as stats_router
 
 from core.utils import (
     check_libreoffice,
@@ -45,6 +47,7 @@ def add_routes(app: FastAPI):
     app.include_router(home_router)
     app.include_router(aview_router, prefix="/aview", tags=["aview"])
     app.include_router(cache_router, prefix="/cache", tags=["cache"])
+    app.include_router(stats_router, prefix="/stats", tags=["statistics"])
 
 def add_events(app: FastAPI):
     app.add_event_handler("startup", lambda: startup_event(app))
@@ -71,6 +74,9 @@ def startup_event(app: FastAPI):
         decode_responses=True
     )
     
+    # 통계 DB
+    stats_manager = StatsDatabase(settings.STATS_DB_PATH)
+
     # 템플릿 설정
     from fastapi.templating import Jinja2Templates
     BASE_DIR = Path(__file__).parent
@@ -80,6 +86,7 @@ def startup_event(app: FastAPI):
     # App state에 저장
     app.state.redis = redis_client
     app.state.templates = templates
+    app.state.stats_db = stats_manager
     
     logger.info(f"✅ 로그 디렉토리: {settings.LOG_DIR}, 레벨 : {settings.LOG_LEVEL}")
     logger.info(f"✅ 캐시 디렉토리: {settings.CACHE_DIR}")
