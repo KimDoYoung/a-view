@@ -33,6 +33,7 @@ def signal_handler(signum, frame):
     print(f"🔄 신호 {signum} 받음 - 종료 시작...")
     sys.stderr.write(f"🔄 신호 {signum} 받음 - 종료 시작...\n")
     sys.stderr.flush()
+    
     # 여기서 정리 작업 수행
     if hasattr(signal_handler, 'app') and signal_handler.app:
         try:
@@ -43,7 +44,19 @@ def signal_handler(signum, frame):
             print(f"❌ 종료 중 오류: {e}")
     
     print("✅ 종료 완료")
-    sys.exit(0)
+    
+    # 더 부드러운 종료를 위해 asyncio 루프 정리
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.stop()
+    except:
+        pass
+    
+    # 프로세스 종료
+    import os
+    os._exit(0)  # sys.exit(0) 대신 더 강력한 종료
 
 # 신호 등록
 signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
@@ -169,9 +182,11 @@ def shutdown_event(app: FastAPI):
 app = create_app()
 
 if __name__ == "__main__":
+    # 개발 중 shutdown 이벤트 테스트를 위해 reload=False
+    # 운영에서는 어차피 reload 옵션을 사용하지 않음
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=8003,
-        reload=True
+        reload=False  # shutdown_event 테스트를 위해 False로 설정
     )
