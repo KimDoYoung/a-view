@@ -13,6 +13,9 @@ curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\33.pptx&output=html"
 echo "------------"
 curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\33.pptx&output=pdf"
 echo "------------"
+curl "http://localhost:8003/convert?url=http://localhost:8003/static/files/AssetERP/1.docx&output=pdf"
+echo "------------"
+curl "http://localhost:8003/convert?url=http://localhost:8003/static/files/AssetERP/1.xlsx&output=html"   
 
 end_time=$(date +%s)
 execution_time=$((end_time - start_time))

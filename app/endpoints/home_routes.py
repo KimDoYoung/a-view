@@ -99,18 +99,35 @@ async def convert_document(
         return ConvertResponse.error_response(f"변환 중 오류가 발생했습니다: {str(e)}")
     
 @router.post("/convert", response_model=ConvertResponse)
-async def convert_document_post(request: ConvertRequest) -> ConvertResponse:
+async def convert_document_post(request: Request, convert_request: ConvertRequest) -> ConvertResponse:
     """POST 방식 변환"""
+    redis_client = get_redis(request)
     try:
-        params = ConvertParams(**request.model_dump())
-        return await convert_document(
-            url=params.url, 
-            path=params.path, 
-            output=params.output
-        )
+        params = ConvertParams(**convert_request.model_dump())
+        
+        if params.is_url_source:
+            logger.info(f"POST URL에서 다운로드: {params.url}")
+            converted_url = await url_download_and_convert(redis_client, params.url, params.output)
+            
+            return ConvertResponse.success_response(
+                url=converted_url,
+                message=f"URL 문서가 {params.output} 형식으로 변환되었습니다"
+            )
+        else:
+            logger.info(f"POST 로컬 파일 변환: {params.path}")
+            converted_url = await local_file_copy_and_convert(redis_client, params.path, params.output)
+            
+            return ConvertResponse.success_response(
+                url=converted_url,
+                message=f"로컬 파일이 {params.output} 형식으로 변환되었습니다"
+            )
+            
     except ValueError as e:
         logger.error(f"POST validation error: {str(e)}")
         return ConvertResponse.error_response(f"입력 오류: {str(e)}")
+    except FileNotFoundError as e:
+        logger.error(f"POST file not found: {str(e)}")
+        return ConvertResponse.error_response(f"파일을 찾을 수 없습니다: {str(e)}")
     except Exception as e:
         logger.error(f"POST unexpected error: {str(e)}")
         return ConvertResponse.error_response(f"변환 중 오류가 발생했습니다: {str(e)}")
@@ -257,7 +274,7 @@ async def download_file(
                 actual_filename = path_parts[-1]  # 마지막 부분이 실제 파일명
                 logger.info(f"추출된 파일명: {actual_filename}")
                 
-                from app.config import settings
+                from app.core.config import settings
                 file_path_obj = Path(settings.CONVERTED_DIR) / actual_filename
             else:
                 raise ValueError(f"잘못된 파일 경로 형식: {file_path}")
@@ -267,7 +284,7 @@ async def download_file(
             
             # 절대 경로가 아닌 경우 converted 디렉토리 기준으로 처리
             if not file_path_obj.is_absolute():
-                from app.config import settings
+                from app.core.config import settings
                 file_path_obj = Path(settings.CONVERTED_DIR) / file_path
         
         logger.info(f"최종 파일 경로: {file_path_obj}")
