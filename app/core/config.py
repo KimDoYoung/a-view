@@ -64,6 +64,9 @@ class Config:
         self.EVERY_DAY_AT = os.getenv('EVERY_DAY_AT', '03:00')
         self.EVERY_SUNDAY_AT = os.getenv('EVERY_SUNDAY_AT', '02:00')
 
+        # 업로드 및 테스트용 파일 디렉토리
+        self.FILES_DIR = os.getenv('TEST_FILES_DIR', f'{self.BASE_DIR}/files')
+
         # 디렉토리 생성
         self._create_directories()
         
@@ -74,8 +77,9 @@ class Config:
             self.CACHE_DIR,
             self.CONVERTED_DIR,
             self.LOG_DIR,
-            self.STATS_DB_PATH.rsplit('/', 1)[0] if '/' in self.STATS_DB_PATH else self.STATS_DB_PATH.rsplit('\\', 1)[0]
-    ]
+            self.STATS_DB_PATH.rsplit('/', 1)[0] if '/' in self.STATS_DB_PATH else self.STATS_DB_PATH.rsplit('\\', 1)[0],
+            self.FILES_DIR
+        ]
         
         for directory in directories:
             if not os.path.exists(directory):

@@ -122,4 +122,29 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
 5. 파일이 업로드 성공하면 AssetERP파일리스트 상단에 올린 파일명이 나와야 함.
 6. AssetERP파일리스트에서 파일을 1개 선택하면 4개의 input 란이 채워져야함 (예를 들어 abc.docx를 선택) 즉
    - convert path : http:localhost:8003/convert?path=c:\\..static\\files\\AssetERP\\abc.docx&output=pdf
+
+run_test.html 의 작성
+1. ui (4:8로 수평분활)
+    - 4 영역
+    - config.FILES_DIR 안의 파일목록을 리스트 할 수 있는 list (파일명 앞에 checkbox)
+    - list 하단에 upload버튼, delete button(checked항목만 삭제), delete all button
+    - 8 영역
+    - convert, view 수평 radio ,default convert
+    - path, url 수평 radio, default path
+    - output (radio로 pdf, html) pdf default
+    - address input box
+    - run button
+2. 동작
+    - upload버튼 시 /aview/upload (멀티파일) config.FILES_DIR에 upload를 한 후 파일list refresh 최근것이 상단에 배치
+    - delete all, delete는 모두 지우기와 선택된 것 지우기
+    - convert/ view radio, path/url radio, filelist 선택 시 inputbox의 내용이 변경
+    - http://localhost:8003/convert(view)?url=http://localhost:8003/aview/files/abc.xlsx&output=pdf 문자열을 input box에 조합하여 표시
+    - run button 새로운 브라우저를 띄우면서 input_box 실행
+    - 주의 (선택된 파일이 office 문서이면 output radio는  disable)
+3. API
+GET  /aview/files          # 파일 목록 조회
+GET  /aview/files/{filename}  # 파일 다운로드
+POST /aview/upload         # 파일 업로드
+POST /aview/delete?filename         # 선택 파일 삭제
+POST /aview/delete-all     # 전체 파일 삭제
 ```   

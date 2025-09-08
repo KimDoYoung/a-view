@@ -152,7 +152,7 @@ def startup_event(app: FastAPI):
         logger.warning("❌ Redis:  비활성화")
     logger.info(f"✅ 통계 DB 경로: {settings.STATS_DB_PATH}")
     logger.info("✅ 통계 스케줄러 시작됨")
-    logger.info(f"✔️ 매일 재계산 시각: {settings.EVERY_DAY_AT}, 매주 주간 정리 시각: 일요일 {settings.EVERY_SUNDAY_AT}")
+    logger.info(f"✔️ 통계 daily 시각: {settings.EVERY_DAY_AT}, 매주 일요일 정리 시각: {settings.EVERY_SUNDAY_AT}")
     logger.info(f"✅ {settings.APP_NAME} v{settings.VERSION} 초기화 완료")
 
 def shutdown_event(app: FastAPI):
