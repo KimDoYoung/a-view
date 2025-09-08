@@ -1,16 +1,36 @@
 # aview_routes.py
 from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from app.core.utils import (
     check_libreoffice,
-    get_redis
+    get_redis,
+    get_templates
 )
 from app.core.config import settings
 
 router = APIRouter()
 
+@router.get("/run-test", response_class=HTMLResponse)
+async def run_test(request: Request):
+    """테스트용 엔드포인트"""
+    templates = get_templates(request)
+    context = {
+        "request": request,
+        "title": "A-View 테스트",
+    }
+    return templates.TemplateResponse("run_test.html", context)
+
+@router.get("/log-view", response_class=HTMLResponse)
+async def log_view(request: Request):
+    """로그 뷰어용 엔드포인트"""
+    templates = get_templates(request)
+    context = {
+        "request": request,
+        "title": "로그 뷰어",
+    }
+    return templates.TemplateResponse("log_view.html", context) 
 
 @router.get("/pdf/{filename}")
 async def serve_pdf(filename: str):

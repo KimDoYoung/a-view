@@ -7,12 +7,6 @@ from core.config import settings
 
 router = APIRouter()
 
-@router.get("/")
-async def dashboard_page(request: Request):
-    """대시보드 페이지"""
-    templates = request.app.state.templates
-    return templates.TemplateResponse("dashboard.html", {"request": request})
-
 @router.get("/system-status")
 async def get_system_status(request: Request):
     """시스템 상태 조회"""

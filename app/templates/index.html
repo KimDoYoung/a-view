@@ -42,12 +42,20 @@
     <nav class="navbar navbar-light bg-white shadow-sm">
         <div class="container">
             <span class="navbar-brand mb-0 h1">{{ title }}</span>
-            <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-outline-secondary btn-sm" x-on:click="loadStats()">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-info btn-sm" onclick="window.open('/aview/run-test', '_self')">
+                    <i class="bi bi-play-circle me-1"></i>
+                    테스트
+                </button>
+                <button class="btn btn-outline-warning btn-sm" onclick="window.open('/aview/log-view', '_self')">
+                    <i class="bi bi-journal-text me-1"></i>
+                    Log보기
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @click="loadStats()">
                     <i class="bi bi-arrow-clockwise me-1"></i>
                     새로고침
                 </button>
-                <button class="btn btn-outline-primary" onclick="window.open('/about', '_self')">
+                <button class="btn btn-outline-primary btn-sm" onclick="window.open('/about', '_self')">
                     <i class="bi bi-info-circle me-1"></i>
                     A-View 소개
                 </button>
@@ -207,51 +215,6 @@
                 </div>
             </div>
         </div>
-        <!-- 기존 테스트 기능 -->
-        <div class="row justify-content-center mb-4">
-            <div class="col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">🧪 문서 변환 테스트</h5>
-                        <p class="text-muted">LibreOffice를 사용하여 다양한 문서 형식을 변환합니다.</p>
-                        
-                        <!-- URL 입력 테스트 -->
-                        <div class="mb-3">
-                            <label for="urlInput" class="form-label">문서 URL 테스트</label>
-                            <div class="input-group">
-                                <input type="url" 
-                                       class="form-control" 
-                                       id="urlInput" 
-                                       placeholder="https://example.com/document.xlsx"
-                                       x-model="testUrl">
-                                <button class="btn btn-primary" 
-                                        x-on:click="testUrlViewer()" 
-                                        x-bind:disabled="!testUrl || converting">
-                                    <span x-show="converting" class="spinner-border spinner-border-sm me-2"></span>
-                                    뷰어 테스트
-                                </button>
-                            </div>
-                            <small class="text-muted">AssetERP에서 사용할 URL 형식을 테스트해볼 수 있습니다</small>
-                        </div>
-                        
-                        <!-- 파일 업로드 (향후 구현용) -->
-                        <div class="upload-area p-4 text-center mb-3 opacity-50" 
-                             style="pointer-events: none;">
-                            <i class="bi bi-cloud-upload display-4 text-muted mb-3"></i>
-                            <h6>파일 업로드 (준비 중)</h6>
-                            <p class="text-muted small">지원 형식: DOC, DOCX, XLS, XLSX, PPT, PPTX, PDF</p>
-                        </div>
-                        
-                        <!-- 결과 표시 -->
-                        <div x-show="result" class="alert mt-3" 
-                             x-bind:class="result?.status === 'success' ? 'alert-success' : 'alert-danger'">
-                            <strong x-text="result?.status === 'success' ? '성공' : '오류'"></strong>
-                            <span x-text="result?.message"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
         
         <!-- 시스템 작업 -->
         <div class="row">
@@ -259,46 +222,51 @@
                 <div class="card">
                     <div class="card-body">
                         <h6 class="card-title">🔧 시스템 작업</h6>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-sm btn-outline-primary" 
-                                    x-on:click="healthCheck()" 
-                                    x-bind:disabled="systemLoading">
-                                <span x-show="systemLoading && currentAction === 'health'" class="spinner-border spinner-border-sm me-2"></span>
-                                Health Check
-                            </button>
-                            <button class="btn btn-sm btn-outline-info" 
-                                    x-on:click="statsCache()" 
-                                    x-bind:disabled="systemLoading">
-                                <span x-show="systemLoading && currentAction === 'stats'" class="spinner-border spinner-border-sm me-2"></span>
-                                Cache Stats
-                            </button>
-                            <div class="row g-1">
-                                <div class="col-4">
-                                    <button class="btn btn-sm btn-outline-warning w-100" 
-                                            x-on:click="cleanupCache()" 
-                                            x-bind:disabled="systemLoading"
-                                            title="24시간 이상된 캐시 파일 정리">
-                                        <span x-show="systemLoading && currentAction === 'cleanup'" class="spinner-border spinner-border-sm me-1"></span>
-                                        Cleanup
-                                    </button>
-                                </div>
-                                <div class="col-4">
-                                    <button class="btn btn-sm btn-outline-danger w-100" 
-                                            x-on:click="clearAllCache()" 
-                                            x-bind:disabled="systemLoading"
-                                            title="모든 캐시 파일 삭제">
-                                        <span x-show="systemLoading && currentAction === 'clear-all'" class="spinner-border spinner-border-sm me-1"></span>
-                                        Clear All
-                                    </button>
-                                </div>
-                                <div class="col-4">
-                                    <button class="btn btn-sm btn-outline-secondary w-100" 
-                                            x-on:click="showDeleteFileModal()" 
-                                            x-bind:disabled="systemLoading"
-                                            title="특정 파일 캐시 삭제">
-                                        Del File
-                                    </button>
-                                </div>
+                        <div class="row g-2">
+                            <div class="col">
+                                <button class="btn btn-sm btn-outline-primary w-100" 
+                                        x-on:click="healthCheck()" 
+                                        x-bind:disabled="systemLoading"
+                                        title="시스템 상태 확인">
+                                    <span x-show="systemLoading && currentAction === 'health'" class="spinner-border spinner-border-sm me-1"></span>
+                                    Health
+                                </button>
+                            </div>
+                            <div class="col">
+                                <button class="btn btn-sm btn-outline-info w-100" 
+                                        x-on:click="statsCache()" 
+                                        x-bind:disabled="systemLoading"
+                                        title="캐시 통계 조회">
+                                    <span x-show="systemLoading && currentAction === 'stats'" class="spinner-border spinner-border-sm me-1"></span>
+                                    Stats
+                                </button>
+                            </div>
+                            <div class="col">
+                                <button class="btn btn-sm btn-outline-warning w-100" 
+                                        x-on:click="cleanupCache()" 
+                                        x-bind:disabled="systemLoading"
+                                        title="24시간 이상된 캐시 파일 정리">
+                                    <span x-show="systemLoading && currentAction === 'cleanup'" class="spinner-border spinner-border-sm me-1"></span>
+                                    Cleanup
+                                </button>
+                            </div>
+                            <div class="col">
+                                <button class="btn btn-sm btn-outline-danger w-100" 
+                                        x-on:click="clearAllCache()" 
+                                        x-bind:disabled="systemLoading"
+                                        title="모든 캐시 파일 삭제">
+                                    <span x-show="systemLoading && currentAction === 'clear-all'" class="spinner-border spinner-border-sm me-1"></span>
+                                    Clear All
+                                </button>
+                            </div>
+                            <div class="col">
+                                <button class="btn btn-sm btn-outline-secondary w-100" 
+                                        x-on:click="showDeleteFileModal()" 
+                                        x-bind:disabled="systemLoading"
+                                        title="특정 파일 캐시 삭제">
+                                    <span x-show="systemLoading && currentAction === 'delete-file'" class="spinner-border spinner-border-sm me-1"></span>
+                                    Del File
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -412,37 +380,16 @@
                 },
                 
                 async loadStats() {
+                    console.log('새로고침...')
                     try {
                         const response = await fetch('/stats/dashboard?days=7');
                         if (response.ok) {
                             this.stats = await response.json();
+                            console.log('통계 로드 완료:', this.stats);
                         }
                     } catch (error) {
                         console.error('통계 로드 실패:', error);
                     }
-                },
-                
-                testUrlViewer() {
-                    if (!this.testUrl) {
-                        this.result = {
-                            status: 'error',
-                            message: 'URL을 입력해주세요.'
-                        };
-                        return;
-                    }
-                    
-                    this.converting = true;
-                    this.result = null;
-                    
-                    // URL을 aview 뷰어로 이동
-                    const viewerUrl = `/aview/aview?url=${encodeURIComponent(this.testUrl)}&mode=embed`;
-                    window.open(viewerUrl, '_blank');
-                    
-                    this.converting = false;
-                    this.result = {
-                        status: 'success',
-                        message: '새 창에서 문서 뷰어가 열렸습니다.'
-                    };
                 },
                 
                 healthCheck() {
