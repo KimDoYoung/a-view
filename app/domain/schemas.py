@@ -5,7 +5,7 @@ from typing import Optional, Self
 from pathlib import Path
 import os
 
-from app.file_ext_definition import CONVERTABLE_EXTENSION
+from app.domain.file_ext_definition import CONVERTABLE_EXTENSION
 
 class OutputFormat(str, Enum):
     """지원하는 출력 형식"""

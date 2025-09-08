@@ -4,7 +4,7 @@ A-View 유틸리티 함수들
 - LibreOffice 문서 변환
 - Redis 캐시 작업
 """
-
+import time
 import hashlib
 import os
 import shutil
@@ -17,9 +17,9 @@ import httpx
 import redis
 from fastapi import HTTPException
 
-from app.config import settings, Config
-from app.logger import get_logger
-from app.file_ext_definition import (
+from app.core.config import settings, Config
+from app.core.logger import get_logger
+from app.domain.file_ext_definition import (
     SUPPORTED_EXTENSIONS
 )
 
@@ -848,8 +848,7 @@ def convert_with_libreoffice(input_path: Path, html_path: Path) -> Path:
 
 def cleanup_old_cache_files(max_age_hours: int = 24):
     """오래된 캐시 파일 정리"""
-    from app.config import settings
-    import time
+    
     current_time = time.time()
     max_age_seconds = max_age_hours * 3600
     

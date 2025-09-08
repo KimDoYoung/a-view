@@ -6,9 +6,9 @@ from typing import Optional
 from pathlib import Path
 
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat, ViewParams
-from app.utils import check_libreoffice, local_file_copy_and_convert, url_download_and_convert
-from app.utils import get_redis, get_templates
-from logger import get_logger
+from app.core.utils import check_libreoffice, local_file_copy_and_convert, url_download_and_convert
+from app.core.utils import get_redis, get_templates
+from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 

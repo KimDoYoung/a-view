@@ -9,14 +9,14 @@ import redis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from logger import get_logger
-from config import settings
+from core.logger import get_logger
+from core.config import settings
 
 from endpoints.home_routes import router as home_router
 from endpoints.aview_routes import router as aview_router
 from endpoints.cache_routes import router as cache_router
 
-from utils import (
+from core.utils import (
     check_libreoffice,
     cleanup_old_cache_files
 )

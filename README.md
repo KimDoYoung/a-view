@@ -110,3 +110,4 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
 5. aview-test.html로 테스트하기
 6. 스트레스 테스트를 해 볼 수 있을까?
 7. favicorn 넣기
+8. nav에 version표시

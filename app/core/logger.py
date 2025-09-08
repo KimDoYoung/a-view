@@ -1,8 +1,9 @@
 import logging
 from concurrent_log_handler import ConcurrentRotatingFileHandler
+from app.core.config import settings
 
 def get_logger(name):
-    from config import settings
+    
     logger = logging.getLogger(name)
     logger.setLevel(settings.LOG_LEVEL)
     LOG_FILE = settings.LOG_FILE
