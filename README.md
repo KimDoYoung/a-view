@@ -113,3 +113,13 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
 8. nav에 version표시
 9. async_test3.py : 여러 사용자가 동시에 view or convert 를 보낸다고 가정해서 test하는 프로그램을 작성해서 볼 수 없을까?
 10. my_test.html을 작성
+
+```test
+1. .mytest를 /convert 와 /view 를 테스트하기 위한 UI로 사용하고자 함
+2. static/files/AssetERP에 있는 파일들 목록을 리스트 영역(이하 AssetERP파일리스트)이 있어야함. 
+3. 2개의 api를 수행하기 위해서 파일을 업로드 할 수 있어야함. 
+4. 만약 파일이 업로드 된다면 그 파일을 static/files/AssetERP에 저장되어야함.(overwrite)
+5. 파일이 업로드 성공하면 AssetERP파일리스트 상단에 올린 파일명이 나와야 함.
+6. AssetERP파일리스트에서 파일을 1개 선택하면 4개의 input 란이 채워져야함 (예를 들어 abc.docx를 선택) 즉
+   - convert path : http:localhost:8003/convert?path=c:\\..static\\files\\AssetERP\\abc.docx&output=pdf
+```   
