@@ -146,7 +146,6 @@ async def view_document(
     - URL: /view?url=https://example.com/file.docx (자동으로 PDF 변환)
     - 경로: /view?path=c:\\myfolder\\1.txt (자동으로 HTML 변환)
     """
-    redis_client = get_redis(request)
     try:
         # ViewParams 생성 시 validation 오류 처리
         params = ViewParams(url=url, path=path)
@@ -156,7 +155,7 @@ async def view_document(
         
         if params.is_url_source:
             logger.info(f"URL에서 다운로드 및 변환: {params.url} -> {auto_output.value}")
-            converted_url = await url_download_and_convert(redis_client, params.url, auto_output)
+            converted_url = await url_download_and_convert(request, params.url, auto_output)
             
             # URL에서 원본 파일명 추출
             from urllib.parse import urlparse
@@ -177,8 +176,8 @@ async def view_document(
             template_name = f"view_{auto_output.value}.html"
             return templates.TemplateResponse(template_name, context)
         else:
-            logger.info(f"로컬 파일 변환: {params.path} -> {auto_output.value}")
-            converted_url = await local_file_copy_and_convert(redis_client, params.path, auto_output)
+            logger.info(f"path 파일 변환: {params.path} -> {auto_output.value}")
+            converted_url = await local_file_copy_and_convert(request, params.path, auto_output)
             
             # 로컬 파일에서 원본 파일명 추출
             original_filename = Path(params.path).name

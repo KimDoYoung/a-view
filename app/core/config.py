@@ -60,6 +60,10 @@ class Config:
         self.LOG_MAX_SIZE = int(os.getenv('LOG_MAX_SIZE', str(10 * 1024 * 1024)))  # 10MB
         self.LOG_BACKUP_COUNT = int(os.getenv('LOG_BACKUP_COUNT', '5'))
         
+        # 통계 스케줄러
+        self.EVERY_DAY_AT = os.getenv('EVERY_DAY_AT', '03:00')
+        self.EVERY_SUNDAY_AT = os.getenv('EVERY_SUNDAY_AT', '02:00')
+
         # 디렉토리 생성
         self._create_directories()
         

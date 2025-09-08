@@ -3,12 +3,15 @@ A-View: LibreOffice 기반 문서 뷰어 서비스
 AssetERP의 문서 뷰어로 사용되며, 외부 URL의 Office 문서를 PDF로 변환하여 표시
 """
 
+import signal
+import sys
 from pathlib import Path
 
 import redis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from app.core.stat_scheduler import StatsScheduler
 from app.core.stats_db import StatsDatabase
 from core.logger import get_logger
 from core.config import settings
@@ -25,6 +28,27 @@ from core.utils import (
 
 logger = get_logger(__name__)
 
+def signal_handler(signum, frame):
+    """Signal handler for graceful shutdown"""
+    print(f"🔄 신호 {signum} 받음 - 종료 시작...")
+    sys.stderr.write(f"🔄 신호 {signum} 받음 - 종료 시작...\n")
+    sys.stderr.flush()
+    # 여기서 정리 작업 수행
+    if hasattr(signal_handler, 'app') and signal_handler.app:
+        try:
+            if hasattr(signal_handler.app.state, 'scheduler') and signal_handler.app.state.scheduler:
+                signal_handler.app.state.scheduler.stop_scheduler()
+                print("✅ 스케줄러 종료 완료")
+        except Exception as e:
+            print(f"❌ 종료 중 오류: {e}")
+    
+    print("✅ 종료 완료")
+    sys.exit(0)
+
+# 신호 등록
+signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # 종료 신호
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="A-View Document Viewer for AssetERP",
@@ -34,6 +58,10 @@ def create_app() -> FastAPI:
     add_routes(app)
     add_statics(app)
     add_events(app)
+    
+    # signal handler에 app 전달
+    signal_handler.app = app
+    
     return app
 
 def add_statics(app: FastAPI):  
@@ -51,10 +79,11 @@ def add_routes(app: FastAPI):
 
 def add_events(app: FastAPI):
     app.add_event_handler("startup", lambda: startup_event(app))
-    app.add_event_handler("shutdown", shutdown_event)
+    app.add_event_handler("shutdown", lambda: shutdown_event(app))
 
 def startup_event(app: FastAPI):
     """애플리케이션 시작 시 초기화 작업"""
+    print("🚀 startup_event 시작!")  # 시작 확인용
     logger.info("------------------------------------------------")
     logger.info(f"✳️ 시작: {settings.APP_NAME} v{settings.VERSION}")
     logger.info("------------------------------------------------")
@@ -88,6 +117,11 @@ def startup_event(app: FastAPI):
     app.state.templates = templates
     app.state.stats_db = stats_manager
     
+    # 스케줄러 생성 및 시작
+    scheduler = StatsScheduler(stats_manager)
+    scheduler.start_scheduler()
+    app.state.scheduler = scheduler  # app.state에 저장
+    
     logger.info(f"✅ 로그 디렉토리: {settings.LOG_DIR}, 레벨 : {settings.LOG_LEVEL}")
     logger.info(f"✅ 캐시 디렉토리: {settings.CACHE_DIR}")
     logger.info(f"✅ HTML Template 디렉토리: {TEMPLATE_DIR}")
@@ -103,19 +137,34 @@ def startup_event(app: FastAPI):
             logger.error(f"❌ Redis 연결 실패: {e}")
     else:
         logger.warning("❌ Redis:  비활성화")
+    logger.info(f"✅ 통계 DB 경로: {settings.STATS_DB_PATH}")
+    logger.info("✅ 통계 스케줄러 시작됨")
+    logger.info(f"✔️ 매일 재계산 시각: {settings.EVERY_DAY_AT}, 매주 주간 정리 시각: 일요일 {settings.EVERY_SUNDAY_AT}")
+    logger.info(f"✅ {settings.APP_NAME} v{settings.VERSION} 초기화 완료")
 
-def shutdown_event():
+def shutdown_event(app: FastAPI):
     """애플리케이션 종료 시 정리 작업"""
+    import sys
+    sys.stderr.write("🔄 종료 시작...\n")
+    sys.stderr.flush()
+    print(f"🔄 {settings.APP_NAME} 종료 시작...")  # 이 한 줄이 핵심!
     logger.info(f"✅ {settings.APP_NAME} 종료")
     try:
+        # 스케줄러 종료
+        if hasattr(app.state, 'scheduler') and app.state.scheduler:
+            app.state.scheduler.stop_scheduler()
+            logger.info("✅ 통계 스케줄러 종료 완료")
+        
+        # 캐시 정리
         cleanup_old_cache_files(24)
         logger.info("✅ 캐시 정리 완료")
+        
         logger.info("------------------------------------------------")
         logger.info(f"✳️ 종료: {settings.APP_NAME} v{settings.VERSION}")
         logger.info("------------------------------------------------")
 
     except Exception as e:
-        logger.error(f"❌ 캐시 정리 실패: {e}")
+        logger.error(f"❌ 종료 처리 실패: {e}")
 
 app = create_app()
 
