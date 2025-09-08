@@ -30,6 +30,12 @@
             border-color: #0d6efd;
             background-color: #e7f3ff;
         }
+        .stat-card {
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -37,6 +43,10 @@
         <div class="container">
             <span class="navbar-brand mb-0 h1">{{ title }}</span>
             <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-outline-secondary btn-sm" x-on:click="loadStats()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    새로고침
+                </button>
                 <button class="btn btn-outline-primary" onclick="window.open('/about', '_self')">
                     <i class="bi bi-info-circle me-1"></i>
                     A-View 소개
@@ -46,12 +56,163 @@
     </nav>
 
     <div class="container mt-4">
-        <!-- convert, view api 테스트: 문서를 업로드 한 후 변환(convert) 또는 뷰어(view)로 열기 -->
-        <div class="row justify-content-center  mytest">
+        <!-- 시스템 상태 대시보드 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="mb-3">📊 시스템 상태</h5>
+            </div>
+            
+            <!-- 시스템 상태 카드들 -->
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-hdd-rack display-4 text-info mb-2"></i>
+                        <h6 class="card-title">Redis</h6>
+                        <span class="badge" 
+                              x-bind:class="systemStatus.redis ? 'bg-success' : 'bg-danger'">
+                            <span x-text="systemStatus.redis ? '✓ 연결됨' : '✗ 연결 안됨'"></span>
+                        </span>
+                        <div class="mt-2" x-show="systemStatus.redis">
+                            <small class="text-muted">
+                                메모리: <span x-text="systemStatus.redisMemory || 0"></span>MB
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-database display-4 text-success mb-2"></i>
+                        <h6 class="card-title">SQLite DB</h6>
+                        <span class="badge bg-success">✓ 정상</span>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                크기: <span x-text="systemStatus.dbSize || 0"></span>MB
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-file-earmark-text display-4 text-warning mb-2"></i>
+                        <h6 class="card-title">LibreOffice</h6>
+                        <span class="badge" 
+                              x-bind:class="systemStatus.libreOffice ? 'bg-success' : 'bg-warning'">
+                            <span x-text="systemStatus.libreOffice ? '✓ 사용가능' : '⚠ 확인필요'"></span>
+                        </span>
+                        <div class="mt-2">
+                            <small class="text-muted" x-text="systemStatus.libreVersion || 'Unknown'"></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-folder display-4 text-primary mb-2"></i>
+                        <h6 class="card-title">캐시</h6>
+                        <span class="badge bg-info">
+                            <span x-text="systemStatus.cacheFiles || 0"></span> 파일
+                        </span>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                용량: <span x-text="systemStatus.cacheSize || 0"></span>MB
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 통계 정보 -->
+        <div class="row mb-4" x-show="stats && Object.keys(stats).length > 0">
+            <div class="col-12">
+                <h5 class="mb-3">📈 변환 통계 (최근 7일)</h5>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h3 class="text-primary" x-text="stats.summary?.total_conversions || 0"></h3>
+                        <small class="text-muted">총 변환 건수</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h3 class="text-success" x-text="(stats.summary?.cache_hit_rate || 0) + '%'"></h3>
+                        <small class="text-muted">캐시 적중률</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h3 class="text-info" x-text="stats.summary?.unique_files || 0"></h3>
+                        <small class="text-muted">고유 파일 수</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <h3 class="text-warning" x-text="stats.summary?.total_errors || 0"></h3>
+                        <small class="text-muted">에러 발생 수</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 파일 타입별 통계 -->
+        <div class="row mb-4" x-show="stats && stats.file_types && Object.keys(stats.file_types).length > 0">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">📄 파일 타입별 변환 통계</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <template x-for="[fileType, data] in Object.entries(stats.file_types || {})" :key="fileType">
+                                <div class="col-md-4 mb-3">
+                                    <div class="border rounded p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong x-text="fileType.toUpperCase()"></strong>
+                                            <span class="badge bg-primary" x-text="data.count + '건'"></span>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <small class="text-muted">용량</small><br>
+                                                <small x-text="data.size_mb + 'MB'"></small>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted">평균 시간</small><br>
+                                                <small x-text="data.avg_time + 's'"></small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 기존 테스트 기능 -->
+        <div class="row justify-content-center mb-4">
             <div class="col-md-8">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">테스트</h5>
+                        <h5 class="card-title">🧪 문서 변환 테스트</h5>
                         <p class="text-muted">LibreOffice를 사용하여 다양한 문서 형식을 변환합니다.</p>
                         
                         <!-- URL 입력 테스트 -->
@@ -92,32 +253,12 @@
             </div>
         </div>
         
-        <!-- 시스템 정보 -->
-        <div class="row mt-4">
-            <div class="col-md-6">
+        <!-- 시스템 작업 -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title">시스템 상태</h6>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>LibreOffice</span>
-                            <span class="badge {{ 'bg-success' if libre_status else 'bg-danger' }}">
-                                {{ 'Active' if libre_status else 'Inactive' }}
-                            </span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Redis Cache</span>
-                            <span class="badge {{ 'bg-success' if redis_status else 'bg-danger' }}">
-                                {{ 'Connected' if redis_status else 'Disconnected' }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h6 class="card-title">시스템 작업</h6>
+                        <h6 class="card-title">🔧 시스템 작업</h6>
                         <div class="d-grid gap-2">
                             <button class="btn btn-sm btn-outline-primary" 
                                     x-on:click="healthCheck()" 
@@ -165,7 +306,7 @@
             </div>
             
             <!-- 시스템 정보 결과 표시 영역 -->
-            <div class="col-12 mt-3" x-show="systemResult">
+            <div class="col-md-6 mb-3" x-show="systemResult">
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -177,7 +318,7 @@
                             <div x-show="systemResult?.title">
                                 <strong x-text="systemResult?.title"></strong>
                             </div>
-                            <pre class="mb-0" style="white-space: pre-wrap;" x-text="systemResult?.message"></pre>
+                            <pre class="mb-0" style="white-space: pre-wrap; font-size: 0.8em;" x-text="systemResult?.message"></pre>
                         </div>
                     </div>
                 </div>
@@ -243,6 +384,43 @@
                 deleteType: 'url',
                 deleteFileUrl: '',
                 deleteFilePath: '',
+                systemStatus: {
+                    redis: false,
+                    redisMemory: 0,
+                    libreOffice: false,
+                    libreVersion: 'Unknown',
+                    cacheFiles: 0,
+                    cacheSize: 0,
+                    dbSize: 0
+                },
+                stats: {},
+                
+                async init() {
+                    await this.loadSystemStatus();
+                    await this.loadStats();
+                },
+                
+                async loadSystemStatus() {
+                    try {
+                        const response = await fetch('/stats/system-status');
+                        if (response.ok) {
+                            this.systemStatus = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('시스템 상태 로드 실패:', error);
+                    }
+                },
+                
+                async loadStats() {
+                    try {
+                        const response = await fetch('/stats/dashboard?days=7');
+                        if (response.ok) {
+                            this.stats = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('통계 로드 실패:', error);
+                    }
+                },
                 
                 testUrlViewer() {
                     if (!this.testUrl) {
@@ -265,42 +443,6 @@
                         status: 'success',
                         message: '새 창에서 문서 뷰어가 열렸습니다.'
                     };
-                },
-                
-                convertDocument() {
-                    this.converting = true;
-                    this.result = null;
-                    
-                    // 실제 구현에서는 FormData로 파일 전송
-                    fetch('/aview/convert', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({})
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        this.result = data;
-                    })
-                    .catch(error => {
-                        this.result = {
-                            status: 'error',
-                            message: '변환 중 오류가 발생했습니다.'
-                        };
-                    })
-                    .finally(() => {
-                        this.converting = false;
-                    });
-                },
-                
-                handleDrop(event) {
-                    event.target.classList.remove('dragover');
-                    const files = event.dataTransfer.files;
-                    if (files.length > 0) {
-                        console.log('파일 드롭:', files[0].name);
-                        // 실제 파일 처리 로직
-                    }
                 },
                 
                 healthCheck() {
@@ -549,11 +691,6 @@ ${JSON.stringify(data, null, 2)}`;
                         this.systemLoading = false;
                         this.currentAction = null;
                     });
-                },
-            
-                showUsageInfo(){
-                  console.log('사용법 페이지 오픈...')
-                  window.open('/usage', '_blank')
                 }
             };
         }
@@ -562,25 +699,6 @@ ${JSON.stringify(data, null, 2)}`;
         document.addEventListener('alpine:init', () => {
             Alpine.data('app', createAppComponent);
         });
-        
-
-        // 파일 선택 처리 (요소가 존재하는 경우만)
-        const fileInput = document.getElementById('fileInput');
-        if (fileInput) {
-            fileInput.addEventListener('change', function(e) {
-                if (e.target.files.length > 0) {
-                    console.log('파일 선택:', e.target.files[0].name);
-                }
-            });
-        }
-        
-        // 업로드 영역 클릭 시 파일 선택 (요소가 존재하는 경우만)
-        const uploadArea = document.querySelector('.upload-area');
-        if (uploadArea && fileInput) {
-            uploadArea.addEventListener('click', function() {
-                fileInput.click();
-            });
-        }
     </script>
     
     <!-- Bootstrap 5 JavaScript -->

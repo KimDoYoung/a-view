@@ -1,22 +1,128 @@
 # ===== 통계 API 라우트 예제 =====
 from fastapi import APIRouter, Query, Request
 from datetime import date
+from pathlib import Path
+from core.utils import check_libreoffice
+from core.config import settings
 
 router = APIRouter()
+
+@router.get("/")
+async def dashboard_page(request: Request):
+    """대시보드 페이지"""
+    templates = request.app.state.templates
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@router.get("/system-status")
+async def get_system_status(request: Request):
+    """시스템 상태 조회"""
+    try:
+        # Redis 상태 확인
+        redis_client = request.app.state.redis
+        redis_status = False
+        redis_memory = 0
+        
+        try:
+            redis_client.ping()
+            redis_status = True
+            # Redis 메모리 사용량 (대략적)
+            info = redis_client.info('memory')
+            redis_memory = round(info.get('used_memory', 0) / 1024 / 1024, 2)
+        except Exception:
+            pass
+        
+        # LibreOffice 상태
+        libre_status, libre_version = check_libreoffice()
+        
+        # 캐시 디렉토리 상태
+        cache_dir = Path(settings.CACHE_DIR)
+        cache_files = 0
+        cache_size = 0
+        
+        if cache_dir.exists():
+            cache_files = len(list(cache_dir.rglob('*'))) - len(list(cache_dir.rglob('*/')))  # 폴더 제외
+            cache_size = round(sum(f.stat().st_size for f in cache_dir.rglob('*') if f.is_file()) / 1024 / 1024, 2)
+        
+        # DB 크기
+        db_path = Path(settings.STATS_DB_PATH)
+        db_size = round(db_path.stat().st_size / 1024 / 1024, 2) if db_path.exists() else 0
+        
+        return {
+            "redis": redis_status,
+            "redisMemory": redis_memory,
+            "libreOffice": libre_status,
+            "libreVersion": libre_version,
+            "cacheFiles": cache_files,
+            "cacheSize": cache_size,
+            "dbSize": db_size,
+            "timestamp": date.today().isoformat()
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "redis": False,
+            "libreOffice": False,
+            "cacheFiles": 0,
+            "cacheSize": 0,
+            "dbSize": 0
+        }
 
 @router.get("/dashboard")
 async def stats_dashboard(request: Request, days: int = Query(7, ge=1, le=365)):
     """통계 대시보드 데이터"""
     db = request.app.state.stats_db
     
-    return {
-        "period": days,
-        "file_types": db.get_file_type_stats(days),
-        "top_files": db.get_top_files(days),
-        "hourly_distribution": db.get_hourly_distribution(days),
-        "cache_effectiveness": db.get_cache_effectiveness(days),
-        "errors": db.get_error_stats(days)
-    }
+    try:
+        # 파일 타입별 통계
+        file_types = db.get_file_type_stats(days)
+        
+        # TOP 파일들
+        top_files = db.get_top_files(days, limit=10)
+        
+        # 시간대별 분포
+        hourly_distribution = db.get_hourly_distribution(days)
+        
+        # 캐시 효율성
+        cache_effectiveness = db.get_cache_effectiveness(days)
+        
+        # 에러 통계
+        errors = db.get_error_stats(days)
+        
+        # 출력 형식별 통계 (PDF vs HTML)
+        output_formats = {}
+        for file_type, data in file_types.items():
+            # 간단한 추정: docx, pptx -> PDF가 많고, txt -> HTML이 많다고 가정
+            if file_type in ['docx', 'pptx', 'xlsx']:
+                output_formats['pdf'] = output_formats.get('pdf', 0) + data['count']
+            else:
+                output_formats['html'] = output_formats.get('html', 0) + data['count']
+        
+        return {
+            "period": days,
+            "file_types": file_types,
+            "top_files": top_files,
+            "hourly_distribution": hourly_distribution,
+            "cache_effectiveness": cache_effectiveness,
+            "errors": errors,
+            "output_formats": output_formats,
+            "summary": {
+                "total_conversions": cache_effectiveness.get('total_requests', 0),
+                "cache_hit_rate": round(cache_effectiveness.get('hit_rate', 0), 1),
+                "total_errors": len(errors),
+                "unique_files": len(top_files)
+            }
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "period": days,
+            "file_types": {},
+            "top_files": [],
+            "hourly_distribution": {},
+            "cache_effectiveness": {},
+            "errors": [],
+            "output_formats": {"pdf": 0, "html": 0}
+        }
 
 @router.get("/daily/{date}")
 async def get_daily_stats(request: Request, date: date):

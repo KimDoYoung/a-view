@@ -525,11 +525,21 @@
             
             async loadSystemStatus() {
                 try {
-                    const response = await fetch('/api/system/status');
+                    const response = await fetch('/stats/system-status');
                     const data = await response.json();
                     this.systemStatus = data;
                 } catch (error) {
                     console.error('시스템 상태 로드 실패:', error);
+                    // 에러 시 기본값 설정
+                    this.systemStatus = {
+                        redis: false,
+                        redisMemory: 0,
+                        libreOffice: false,
+                        libreVersion: 'Unknown',
+                        cacheFiles: 0,
+                        cacheSize: 0,
+                        dbSize: 0
+                    };
                 }
             },
             
