@@ -22,7 +22,7 @@ echo "----------------------------------------------------"
 echo "view"
 echo "----------------------------------------------------"
 curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/1.xlsx"
-echo "------------
+echo "------------"
 curl "http://localhost:8003/view?url=http://localhost:8003/static/files/AssetERP/1.docx"
 echo "----------------------------------------------------"
 curl "http://localhost:8003/view?path=c:/tmp/sample/11.docx"
