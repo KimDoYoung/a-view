@@ -1,5 +1,21 @@
+# home_routes.py
+"""
+모듈 설명: 
+    - 외부 API 및 메인 페이지 엔드포인트 모음
+주요 기능:
+    - get / : 메인 페이지 제공
+    - post /convert : 문서 변환 API 제공
+    - get /view : 문서 뷰어 API 제공
+    - get /download : 변환된 파일 다운로드 API 제공
+    - get /download-original : 원본 파일 다운로드 API 제공
+    - get /image : 이미지 파일 서빙 API 제공
+    - get /about : 소개 페이지 제공
 
 
+작성자: 김도영
+작성일: 2025-09-08
+버전: 1.0
+"""
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse, FileResponse
 from typing import Optional

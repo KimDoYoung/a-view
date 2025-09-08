@@ -1,4 +1,17 @@
 # cache_routes.py
+"""
+모듈 설명: 
+    - cache관련 엔드포인트 모음
+주요 기능:
+    - post /cleanup : 캐시 파일 정리
+    - get /stats : 캐시 통계 조회
+    - post /clear-all : 모든 캐시 파일 삭제
+    - delete /file : 특정 파일 캐시 삭제
+
+작성자: 김도영
+작성일: 2025-09-08
+버전: 1.0
+"""
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 import hashlib

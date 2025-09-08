@@ -1,4 +1,17 @@
-# ===== 통계 API 라우트 예제 =====
+# stats_routes.py
+"""
+모듈 설명: 
+    - 통계관련 엔드포인트 모음
+주요 기능:
+    - get /system-status : 시스템 상태 조회
+    - get /dashboard : 통계 대시보드 데이터 조회
+    - get /daily/{date} : 특정 날짜 통계 조회
+    - get /export : 통계 데이터 내보내기 (json/csv)
+
+작성자: 김도영
+작성일: 2025-09-08
+버전: 1.0
+"""
 from fastapi import APIRouter, Query, Request
 from datetime import date
 from pathlib import Path

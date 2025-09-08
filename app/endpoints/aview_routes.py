@@ -1,4 +1,20 @@
 # aview_routes.py
+"""
+모듈 설명: 
+    - A-View의 FastAPI 라우터 모듈
+    - 주로 system적이면서 내부적인으로 사용하는 엔드포인트들을 정의
+주요 기능:
+    - get /run-test : 테스트 페이지 제공
+    - get /log-view : 로그 뷰어 페이지 제공
+    - get /pdf/{filename} : 변환된 PDF 파일 제공
+    - get /html/{filename} : 변환된 HTML 파일 제공
+    - get /health : 시스템 상태 확인
+
+작성자: 김도영
+작성일: 2025-09-08
+버전: 1.0
+"""
+# aview_routes.py
 from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
