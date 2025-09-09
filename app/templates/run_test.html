@@ -18,7 +18,7 @@
         }
         
         .content-section {
-            padding: 60px 0;
+            padding: 30px 0;
             min-height: calc(100vh - 120px);
         }
         
@@ -34,7 +34,7 @@
     {% include 'common/nav.html' %}
 
     <!-- Main Content -->
-    <div class="content-section" x-data="test-data">
+    <div class="content-section" x-data="testData">
         <div class="container-fluid py-4">
             
             <div class="row">
@@ -228,7 +228,7 @@
     </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script>
 function testComponent() {
     return {
@@ -397,7 +397,7 @@ function testComponent() {
 
 // Alpine.js 초기화
 document.addEventListener('alpine:init', () => {
-    Alpine.data('test-data', testComponent);
+    Alpine.data('testData', testComponent);
 });
 </script>
 </body>
