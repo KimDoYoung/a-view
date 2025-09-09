@@ -58,7 +58,7 @@ async def about(request: Request):
     templates = get_templates(request)
     context = {
         "request": request,
-        "title": "A-View 소개",
+        "title": "소개",
     }
     return templates.TemplateResponse("about.html", context)
 

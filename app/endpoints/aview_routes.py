@@ -36,7 +36,7 @@ async def run_test(request: Request):
     templates = get_templates(request)
     context = {
         "request": request,
-        "title": "A-View 테스트",
+        "title": "API테스트",
     }
     return templates.TemplateResponse("run_test.html", context)
 
