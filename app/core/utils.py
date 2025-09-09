@@ -428,7 +428,7 @@ def convert_csv_to_html(csv_path: Path, html_path: Path, original_filename: str 
         # Jinja2 템플릿 로드
         import os
         # 현재 파일의 디렉토리에서 templates 폴더 찾기
-        current_dir = Path(__file__).parent  # app 디렉토리
+        current_dir = Path(__file__).parent.parent  # app 디렉토리
         template_dir = current_dir / "templates"
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         template = env.get_template('viewer/csv.html')
@@ -508,7 +508,7 @@ def convert_txt_to_html(txt_path: Path, html_path: Path, original_filename: str 
         # Jinja2 템플릿 로드
         import os
         # 현재 파일의 디렉토리에서 templates 폴더 찾기
-        current_dir = Path(__file__).parent  # app 디렉토리
+        current_dir = Path(__file__).parent.parent  # app 디렉토리
         template_dir = current_dir / "templates"
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         
