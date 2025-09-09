@@ -16,7 +16,7 @@
         .image-container {
             background-color: white;
             border-radius: 8px;
-            padding: 20px;
+            padding: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             max-width: 100%;
             margin: 0 auto;
@@ -25,13 +25,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #dee2e6;
         }
         .image-title {
             color: #495057;
-            font-size: 1.2em;
+            font-size: 0.9em;
             font-weight: bold;
             margin: 0;
         }
@@ -181,19 +181,8 @@
 <body>
     <div class="image-container">
         <div class="image-header">
-            <h1 class="image-title">🖼️ {{ filename }}</h1>
+            <h3 class="image-title">🖼️ {{ filename }} ({{image_filename}})</h3>
         </div>
-        
-        <!-- 이미지 뷰어 툴바 -->
-        <div class="image-toolbar">
-            <button class="toolbar-btn" onclick="viewer.zoomIn()" title="확대">🔍+ 확대</button>
-            <button class="toolbar-btn" onclick="viewer.zoomOut()" title="축소">🔍- 축소</button>
-            <button class="toolbar-btn" onclick="viewer.rotate(90)" title="시계방향 90도 회전">🔄 회전</button>
-            <button class="toolbar-btn" onclick="viewer.rotate(-90)" title="반시계방향 90도 회전">↻ 역회전</button>
-            <button class="toolbar-btn" onclick="viewer.reset()" title="원본 크기로 복원">↺ 리셋</button>
-            <button class="toolbar-btn" onclick="viewer.full()" title="전체화면">⛶ 전체화면</button>
-        </div>
-        
         <!-- 이미지 뷰어 -->
         <div class="image-viewer">
             <div class="placeholder-image" id="image-placeholder">

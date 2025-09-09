@@ -592,7 +592,7 @@ def convert_image_to_html(image_path: Path, html_path: Path, original_filename: 
         image_filename = image_path.name
         
         # Jinja2 템플릿 로드
-        current_dir = Path(__file__).parent  # app 디렉토리
+        current_dir = Path(__file__).parent.parent  # app 디렉토리
         template_dir = current_dir / "templates"
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         template = env.get_template('viewer/image.html')
@@ -612,7 +612,7 @@ def convert_image_to_html(image_path: Path, html_path: Path, original_filename: 
             file_size_mb=round(file_size_mb, 2),
             exif_data=exif_data
         )
-        
+        logger.debug(f"이미지 View 변환정보: {html_content}")
         # HTML 파일로 저장 (UTF-8 인코딩)
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
