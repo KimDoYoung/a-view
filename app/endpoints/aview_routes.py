@@ -15,12 +15,15 @@
 버전: 1.0
 """
 # aview_routes.py
+import datetime
+import os
 from typing import List
 from pathlib import Path
 from fastapi import APIRouter, File, Request, HTTPException, UploadFile, UploadFile
 from fastapi.params import Query
 from fastapi.responses import FileResponse, HTMLResponse
 
+from app.core.logger import read_log_file
 from app.core.utils import (
     check_libreoffice,
     get_redis,
@@ -42,13 +45,46 @@ async def run_test(request: Request):
 
 @router.get("/log-view", response_class=HTMLResponse)
 async def log_view(request: Request):
-    """로그 뷰어용 엔드포인트"""
+    """로그 뷰어용 엔드포인트 - title만 전달"""
     templates = get_templates(request)
+    
     context = {
         "request": request,
         "title": "로그 뷰어",
+        "log_file_path": settings.LOG_FILE
     }
-    return templates.TemplateResponse("log_view.html", context) 
+    
+    return templates.TemplateResponse("log_view.html", context)
+
+@router.get("/log-data")
+async def get_log_data(lines: int = Query(1000, description="표시할 로그 라인 수")):
+    """AJAX용 로그 데이터 제공 엔드포인트"""
+    try:
+        # 로그 파일 읽기
+        log_lines = read_log_file(lines)
+        log_content = ''.join(log_lines)
+        
+        return {
+            "content": log_content,
+            "lines_count": len(log_lines),
+            "requested_lines": lines,
+            "file_path": str(settings.LOG_FILE),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"로그 파일 읽기 실패: {str(e)}")
+
+@router.get("/log-download")
+async def download_log_file():
+    """로그 파일 다운로드"""
+    if os.path.exists(settings.LOG_FILE):
+        return FileResponse(
+            path=settings.LOG_FILE,
+            filename=f"application_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+            media_type='text/plain'
+        )
+    else:
+        raise HTTPException(status_code=404, detail="로그 파일을 찾을 수 없습니다.")
 
 @router.get("/pdf/{filename}")
 async def serve_pdf(filename: str):

@@ -8,18 +8,26 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    {% if title != "홈" and title != "대시보드" %}
                     <li class="nav-item">
                         <a class="nav-link" href="/">홈</a>
                     </li>
-                    <li class="nav-item">
+                    {% endif %}
+                    {% if "테스트" not in title %}    
+                    <li class="nav-item"></li>
                         <a class="nav-link" href="/aview/run-test">API 테스트</a>
                     </li>
+                    {% endif %}
+                    {% if title != "로그 뷰어" %}
                     <li class="nav-item">
                         <a class="nav-link" href="/aview/log-view">로그 뷰어</a>
                     </li>
+                    {% endif %}
+                    {% if title != "소개" and title != "A-View 소개" %}
                     <li class="nav-item">
                         <a class="nav-link" href="/about">소개</a>
                     </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
