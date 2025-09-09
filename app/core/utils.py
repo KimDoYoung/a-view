@@ -768,7 +768,7 @@ def convert_md_to_html(md_path: Path, html_path: Path, original_filename: str = 
         syntax_css = formatter.get_style_defs('.highlight')
         
         # Jinja2 템플릿 로드
-        current_dir = Path(__file__).parent
+        current_dir = Path(__file__).parent.parent  # app/core -> app
         template_dir = current_dir / "templates"
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         

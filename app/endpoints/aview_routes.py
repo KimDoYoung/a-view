@@ -37,9 +37,15 @@ router = APIRouter()
 async def run_test(request: Request):
     """테스트용 엔드포인트"""
     templates = get_templates(request)
+    app_settings = {
+        "HOST": settings.HOST,
+        "PORT": settings.PORT,
+        "FILES_DIR": settings.FILES_DIR,
+    }
     context = {
         "request": request,
         "title": "API테스트",
+        "settings_json": app_settings
     }
     return templates.TemplateResponse("run_test.html", context)
 
@@ -172,36 +178,36 @@ async def get_files():
         }
 
 @router.get("/files/{filename}")
-async def download_file(filename: str):
-    """파일 다운로드"""
+async def serve_file(filename: str):
+    """파일 제공 (static 파일처럼 브라우저에서 표시)"""
     try:
         file_path = Path(settings.FILES_DIR) / filename
         
         if not file_path.exists():
-            return {
-                "success": False,
-                "error_code": "FILE_NOT_FOUND",
-                "error_message": f"파일을 찾을 수 없습니다: {filename}"
-            }
+            raise HTTPException(status_code=404, detail=f"파일을 찾을 수 없습니다: {filename}")
         
         if not file_path.is_file():
-            return {
-                "success": False,
-                "error_code": "NOT_A_FILE",
-                "error_message": f"요청한 항목이 파일이 아닙니다: {filename}"
-            }
+            raise HTTPException(status_code=404, detail=f"요청한 항목이 파일이 아닙니다: {filename}")
+        
+        # 파일 확장자에 따른 MIME 타입 결정
+        import mimetypes
+        media_type, _ = mimetypes.guess_type(str(file_path))
+        if media_type is None:
+            media_type = "application/octet-stream"
         
         return FileResponse(
             path=file_path,
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            media_type=media_type,
+            headers={
+                "Content-Disposition": "inline",  # 다운로드가 아닌 브라우저에서 표시
+                "Cache-Control": "public, max-age=3600"  # 1시간 캐시
+            }
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        return {
-            "success": False,
-            "error_code": "FILE_DOWNLOAD_ERROR",
-            "error_message": f"파일 다운로드 실패: {str(e)}"
-        }
+        raise HTTPException(status_code=500, detail=f"파일 제공 실패: {str(e)}")
 
 @router.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):

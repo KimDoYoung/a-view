@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - A-View</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/image/favicon16.png">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -48,22 +49,26 @@
                             <!-- 파일 목록 -->
                             <div class="file-list mb-3">
                                 <div class="list-group list-group-flush">
-                                    <template x-for="file in files" :key="file.name">
+                                    <template x-for="(file, index) in files" :key="index">
                                         <div class="list-group-item">
                                             <div class="form-check">
                                                 <input 
                                                     class="form-check-input" 
                                                     type="checkbox" 
-                                                    :id="'file-' + file.name"
+                                                    :id="'file-' + index"
                                                     x-model="file.checked"
                                                     @change="updateSelectedFiles()"
                                                 >
                                                 <label 
-                                                    class="form-check-label text-truncate" 
-                                                    :for="'file-' + file.name"
+                                                    class="form-check-label w-100" 
+                                                    :for="'file-' + index"
                                                     :title="file.name"
                                                 >
-                                                    <span x-text="file.name"></span>
+                                                    <div class="d-flex justify-content-between align-items-center w-100">
+                                                        <span x-text="file.name" class="text-truncate flex-grow-1 me-2"></span>
+                                                        <small class="text-muted text-nowrap" x-show="file.size > 0" x-text="formatFileSize(file.size)">
+                                                        </small>
+                                                    </div>
                                                 </label>
                                             </div>
                                         </div>
@@ -75,25 +80,34 @@
                             </div>
                             
                             <!-- 파일 관리 버튼 -->
-                            <div class="d-grid gap-2">
+                            <div class="row g-2">
                                 <input type="file" class="d-none" id="fileUpload" multiple @change="uploadFiles($event)">
-                                <button class="btn btn-primary" onclick="document.getElementById('fileUpload').click()">
-                                    업로드
-                                </button>
-                                <button 
-                                    class="btn btn-warning" 
-                                    :disabled="!hasCheckedFiles"
-                                    @click="deleteSelected()"
-                                >
-                                    선택 삭제
-                                </button>
-                                <button 
-                                    class="btn btn-danger" 
-                                    :disabled="files.length === 0"
-                                    @click="deleteAll()"
-                                >
-                                    모두 삭제
-                                </button>
+                                <div class="col-4">
+                                    <button class="btn btn-primary w-100 btn-sm" onclick="document.getElementById('fileUpload').click()">
+                                        <i class="bi bi-upload me-1"></i>
+                                        업로드
+                                    </button>
+                                </div>
+                                <div class="col-4">
+                                    <button 
+                                        class="btn btn-warning w-100 btn-sm" 
+                                        :disabled="!hasCheckedFiles"
+                                        @click="deleteSelected()"
+                                    >
+                                        <i class="bi bi-trash me-1"></i>
+                                        선택삭제
+                                    </button>
+                                </div>
+                                <div class="col-4">
+                                    <button 
+                                        class="btn btn-danger w-100 btn-sm" 
+                                        :disabled="files.length === 0"
+                                        @click="deleteAll()"
+                                    >
+                                        <i class="bi bi-trash3 me-1"></i>
+                                        모두삭제
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -176,7 +190,6 @@
                                             value="pdf"
                                             x-model="output"
                                             @change="updateUrl()"
-                                            :disabled="isOfficeDocument"
                                         >
                                         <label class="form-check-label" for="outputPdf">PDF</label>
                                     </div>
@@ -188,7 +201,6 @@
                                             value="html"
                                             x-model="output"
                                             @change="updateUrl()"
-                                            :disabled="isOfficeDocument"
                                         >
                                         <label class="form-check-label" for="outputHtml">HTML</label>
                                     </div>
@@ -206,7 +218,6 @@
                                     class="form-control" 
                                     id="urlInput"
                                     x-model="generatedUrl"
-                                    readonly
                                 >
                             </div>
                             
@@ -229,7 +240,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<!-- 설정 데이터 -->
+<script id="app-settings" type="application/json">{{ settings_json|tojson }}</script>
+
 <script>
+// 설정 데이터 로드
+const appSettings = JSON.parse(document.getElementById('app-settings').textContent);
+
 function testComponent() {
     return {
 
@@ -264,15 +282,33 @@ function testComponent() {
             try {
                 const response = await fetch('/aview/files');
                 if (response.ok) {
-                    const fileList = await response.json();
-                    this.files = fileList.map(name => ({
-                        name,
+                    const json_data = await response.json();
+                    if (json_data.success !== true) {
+                        console.error('파일 목록 로드 실패: 응답이 성공적이지 않음', json_data);
+                        return;
+                    }
+                    fileList = json_data.files || [];
+                    console.log('로드된 파일 목록:', fileList);
+                    this.files = fileList.map(fileInfo => ({
+                        name: fileInfo.name || fileInfo,  // fileInfo가 객체면 name 속성, 문자열이면 그대로
+                        size: fileInfo.size || 0,
+                        modified: fileInfo.modified || 0,
                         checked: false
-                    })).sort((a, b) => b.name.localeCompare(a.name)); // 최근 파일이 상단
+                    })); // 서버에서 이미 수정시간순으로 정렬됨
                 }
             } catch (error) {
                 console.error('파일 목록 로드 실패:', error);
             }
+        },
+        
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         },
         
         updateSelectedFiles() {
@@ -292,21 +328,24 @@ function testComponent() {
                 return;
             }
             
-            const baseUrl = 'http://localhost:8003';
+            const baseUrl = `http://${appSettings.HOST}:${appSettings.PORT}`;
             const endpoint = this.mode;
             
             let params = [];
             
             if (this.inputType === 'path') {
-                params.push(`path=${encodeURIComponent(this.selectedFile)}`);
+                // 화면 표시용 - 인코딩 없이 보기 좋게
+                params.push(`path=${appSettings.FILES_DIR}/${this.selectedFile}`);
             } else {
-                params.push(`url=${encodeURIComponent(baseUrl + '/aview/files/' + this.selectedFile)}`);
+                // 화면 표시용 - 인코딩 없이 보기 좋게
+                params.push(`url=${baseUrl}/aview/files/${this.selectedFile}`);
             }
             
-            if (!this.isOfficeDocument) {
+            if (endpoint === 'convert') {
                 params.push(`output=${this.output}`);
             }
             
+            // 화면 표시용 URL (인코딩 안함)
             this.generatedUrl = `${baseUrl}/${endpoint}?${params.join('&')}`;
         },
         
@@ -389,8 +428,32 @@ function testComponent() {
         },
         
         runConversion() {
-            if (!this.generatedUrl) return;
-            window.open(this.generatedUrl, '_blank');
+            if (!this.selectedFile) return;
+            
+            // 실제 실행용 URL 생성 (URL 인코딩 적용)
+            const baseUrl = `http://${appSettings.HOST}:${appSettings.PORT}`;
+            const endpoint = this.mode;
+            
+            let params = [];
+            
+            if (this.inputType === 'path') {
+                // 실제 실행 시 - 파일명과 경로 인코딩
+                params.push(`path=${encodeURIComponent(appSettings.FILES_DIR + '/' + this.selectedFile)}`);
+            } else {
+                // 실제 실행 시 - 전체 URL 인코딩
+                const fileUrl = `${baseUrl}/aview/files/${encodeURIComponent(this.selectedFile)}`;
+                params.push(`url=${encodeURIComponent(fileUrl)}`);
+            }
+            
+            if (endpoint === 'convert') {
+                params.push(`output=${this.output}`);
+            }
+            
+            // 실제 실행용 URL (완전히 인코딩됨)
+            const executionUrl = `${baseUrl}/${endpoint}?${params.join('&')}`;
+            
+            console.log('실행 URL:', executionUrl);
+            window.open(executionUrl, '_blank');
         }
     };
 }
