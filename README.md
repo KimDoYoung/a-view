@@ -34,7 +34,7 @@
     # 성공시
     curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\11.docx&output=pdf"
     {"success":true,"url":"http://127.0.0.1:8003/aview/pdf/5165f18545b0e73fd8b3e3bb69a236d8.pdf","message":"로칼 파일이 OutputFormat.PDF 형식으로 변환되었습니다"}
-    curl "http://localhost:8003/convert?url=http://localhost:8003/static/files/AssetERP/1.docx&output=pdf"
+    curl "http://localhost:8003/convert?url=http://user-host:8003/static/files/AssetERP/1.docx&output=pdf"
     {"success":true,"url":"http://127.0.0.1:8003/aview/pdf/25115ce96ff4f71d9d8c66bf7d0d74da.pdf","message":"URL 문서가 OutputFormat.PDF 형식으로 변환 되었습니다"}    
     #  에러시
     curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\aa.docx&output=pdf"
