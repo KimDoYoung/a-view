@@ -2,14 +2,38 @@
 
 ## 개요
 
-- AssetERP에서는 구글의 gview를 이용해서 excel, word, powerpoint 파일을 보여주었는데, 구글이 더 이상 gview서비스를 원활히 지원하지 않아서 
-자체적으로 개발하기로 함.
-- 2가지 방식이 있는데, excel, word, powerpoint를 해석하는 개별 파이썬 라이브러리를 사용하여 변환하는 방식과 libreoffice 라이브러리를 사용하는 방식임
-- 본 프로젝트는 libreoffice 라이브러리를 사용하여 개발함.
+- [AssetERP](http://www.k-fs.co.kr/product2.do)에서는 구글의 gview를 이용해서 excel, word, powerpoint 파일을 보여주었는데, 구글이 더 이상 gview서비스를 원활히 지원하지 않아서 
+자체적으로 개발하기로 하였습니다.
+- 2가지 방식을 고려했는데, excel, word, powerpoint를 해석하는 1)**개별 파이썬 라이브러리를 사용하여 변환하는 방식**과 **libreoffice 라이브러리를 사용하는 방식**임
+- 본 프로젝트는 libreoffice 라이브러리를 사용하여 개발하기로 하였습니다.
 
 ## 설계
 
-### 설계 개요
+### dashboard제공
+- index.html에 dashboard 기능제공
+- 시스템상태 확인
+- 통계 확인
+- 캐쉬 상태 및 관리 기능 제공
+
+### 자체적인 테스트 기능
+- 타 시스템과연계되지 않고 자체적으로 파일을 업로드한 후에 테스트 가능하도록 기능 및 UI제공
+- 타 시스템이 URL을 입력하여 테스트할 수 있도록 함
+
+### 캐쉬 사용
+
+- redis를 사용하여 캐싱
+- 원본파일과 변환된 파일을 파일시스템에서 보관
+- 파일명은 hash함수를 사용해서 작성
+- 주어진 시간(24시간)만 보관
+
+### 통계 및 스케줄링
+
+- sqlite db를 사용하여 일자별, 파일종류별 통계
+- 자체적인 스케줄러를 갖음
+- 매일 새벽에 전날 통계 작성
+- 매주 일요일에 1주일 통계 작성
+
+### API 설계 개요
 
 1. convert와 view 2개의 주요 api를 제공한다.
 2. convert는 오피스 파일들(excel, words, powerpoint)를 대상으로 pdf또는 html로 변환한 후 변환된 url을 제공한다.
@@ -90,19 +114,4 @@ http://a-view-host:8003/aview?url=http://asset-erp-user-host:8003/static/files/A
   docekr rm redis-aview
   docker run -d --name redis-aview -p 6379:6379 redis:latest
   ```
-
-## 고려해 볼 점
-
-1. index.html을 dashboard로 사용
-2. redis로 통계 데이터를 가져갈 수 있을까? 
-   1. 일별 처리 횟수
-   2. 파일 확장자별 횟수
-3. 로그 보기
-4. cache에 있는 파일들 리스트 및 다운로드
-5. aview-test.html로 테스트하기
-6. 스트레스 테스트를 해 볼 수 있을까?
-7. favicorn 넣기
-8. nav에 version표시
-9. async_test3.py : 여러 사용자가 동시에 view or convert 를 보낸다고 가정해서 test하는 프로그램을 작성해서 볼 수 없을까?
-10. my_test.html을 작성
 

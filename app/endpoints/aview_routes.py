@@ -37,15 +37,16 @@ router = APIRouter()
 async def run_test(request: Request):
     """테스트용 엔드포인트"""
     templates = get_templates(request)
+    baseUrl = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}"
     app_settings = {
-        "HOST": settings.HOST,
-        "PORT": settings.PORT,
+        "baseUrl": baseUrl,
         "FILES_DIR": settings.FILES_DIR,
     }
     context = {
         "request": request,
         "title": "API테스트",
-        "settings_json": app_settings
+        "settings_json": app_settings,
+        "version": settings.VERSION
     }
     return templates.TemplateResponse("run_test.html", context)
 
@@ -57,7 +58,8 @@ async def log_view(request: Request):
     context = {
         "request": request,
         "title": "로그 뷰어",
-        "log_file_path": settings.LOG_FILE
+        "log_file_path": settings.LOG_FILE,
+        "version": settings.VERSION,
     }
     
     return templates.TemplateResponse("log_view.html", context)

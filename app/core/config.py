@@ -19,6 +19,7 @@ class Config:
         self.DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
         
         # 서버 설정
+        self.PROTOCOL = os.getenv('PROTOCOL', 'http')
         self.HOST = os.getenv('HOST', '0.0.0.0')
         self.PORT = int(os.getenv('PORT', '8003'))
         self.RELOAD = os.getenv('RELOAD', 'true').lower() == 'true'

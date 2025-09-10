@@ -345,8 +345,8 @@ function testComponent() {
                 this.generatedUrl = '';
                 return;
             }
-            
-            const baseUrl = `http://${appSettings.HOST}:${appSettings.PORT}`;
+
+            const baseUrl = appSettings.baseUrl;
             const endpoint = this.mode;
             
             let params = [];
@@ -449,7 +449,7 @@ function testComponent() {
             if (!this.selectedFile) return;
             
             // 실제 실행용 URL 생성 (URL 인코딩 적용)
-            const baseUrl = `http://${appSettings.HOST}:${appSettings.PORT}`;
+            const baseUrl = appSettings.baseUrl; 
             const endpoint = this.mode;
             
             let params = [];

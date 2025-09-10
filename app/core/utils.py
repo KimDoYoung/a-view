@@ -1040,7 +1040,7 @@ async def url_download_and_convert(request, url: str, output_format: str) -> str
         output_path = await convert_to_html(file_path, converted_dir, original_filename)
     
     logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
     logger.info(f"변환된 파일 URL: {url}")
     end_time = time.time()
     conversion_time = end_time - start_time 
@@ -1077,7 +1077,7 @@ async def local_file_copy_and_convert(request, path: str, output_format: str) ->
         output_path = await convert_to_html(file_path, converted_dir, original_filename)
 
     logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"http://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
     logger.info(f"변환된 파일 URL: {url}")
     # 통계 DB에 기록
     end_time = time.time()

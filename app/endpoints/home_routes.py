@@ -25,6 +25,7 @@ from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, O
 from app.core.utils import check_libreoffice, local_file_copy_and_convert, url_download_and_convert
 from app.core.utils import get_redis, get_templates
 from app.core.logger import get_logger
+from app.core.config import settings
 
 logger = get_logger(__name__)
 
@@ -49,6 +50,7 @@ async def home(request: Request):
         "title": "A-View - Document Viewer for AssetERP",
         "libre_status": libre_status,
         "redis_status": redis_status,
+        "version": settings.VERSION,
     }
     return templates.TemplateResponse("index.html", context)
 
@@ -59,6 +61,7 @@ async def about(request: Request):
     context = {
         "request": request,
         "title": "소개",
+        "version": settings.VERSION,
     }
     return templates.TemplateResponse("about.html", context)
 
