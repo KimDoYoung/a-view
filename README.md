@@ -81,6 +81,22 @@
 | Markdown(.md)                     | HTML        |
 
 
+## 배포
+
+- docker를 사용하여 배포
+- 3개 환경이 이 존재함. 윈도우에서 개발(.env.local), 리눅스 테스트서버(.env.test), 리눅스 운영서버(.env.real)
+- 개발(윈도우)에도 docker가 설치되어 있음.
+- 리눅스 테스트 서버에 사용자 aview를 생성, 홈 디렉토리는 /data1/aview 임
+- 운영 리눅스에는 SSL파일을 .env.real에 기술하여야함.
+
+```bash
+docker compose -f docker-compose.local.yml build
+# 기동
+docker compose -f docker-compose.local.yml up -d
+# 로그
+docker compose -f docker-compose.local.yml logs -f aview
+```
+
 
 ## 설정
 

@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [ "redis-data-real:/data" ]
+    ports: [ "6379:6379" ]
+    restart: unless-stopped
+
+  aview:
+    build:
+      context: .
+      dockerfile: Dockerfile.real
+    image: aview:latest        # 🔹 이미지 이름 (원하는 이름으로 지정 가능)
+    container_name: aview_app  # 🔹 컨테이너 이름      
+    depends_on: [ redis ]
+    env_file: [ ./.env.real ]     # 앱 환경변수 (.env.real에서 PROTOCOL/SSL_* 읽음)
+    environment:
+      AVIEW_MODE: "real"
+      REDIS_HOST: "redis"
+      TZ: "Asia/Seoul"
+      BASE_DIR: "/aview/data"     # 운영도 컨테이너 내부 경로를 통일 권장
+    ports: [ "8003:8003" ]
+    # 운영 호스트의 영구 데이터 경로 ↔ 컨테이너 /aview/data
+    volumes:
+      - /var/opt/aview/data:/aview/data
+      # (HTTPS 필요 시) 인증서 디렉토리 읽기전용 마운트
+      # - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: unless-stopped
+    user: "${AVIEW_UID:-1001}:${AVIEW_GID:-1001}"
+
+volumes:
+  redis-data-real:

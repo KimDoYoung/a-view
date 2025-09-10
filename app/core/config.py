@@ -37,7 +37,7 @@ class Config:
         self.REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
         
         # 캐시 설정
-        self.BASE_DIR = os.getenv('BASE_DIR', 'C:/temp/aview' if os.name == 'nt' else '/tmp/aview')
+        self.BASE_DIR = os.getenv('BASE_DIR', 'C:/tmp/aview' if os.name == 'nt' else '/aview/data')
         self.CACHE_DIR = os.getenv('CACHE_DIR', f'{self.BASE_DIR}/cache')
         self.CONVERTED_DIR = f'{self.CACHE_DIR}/converted'
         self.CACHE_TTL = int(os.getenv('CACHE_TTL', '86400'))  # 24시간

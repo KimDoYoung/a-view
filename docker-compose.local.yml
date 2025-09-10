@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [ "redis-data-local:/data" ]
+    ports: [ "6379:6379" ]
+    restart: unless-stopped
+
+  aview:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    image: aview:latest        # 🔹 이미지 이름 (원하는 이름으로 지정 가능)
+    container_name: aview_app  # 🔹 컨테이너 이름      
+    depends_on: [ redis ]
+    env_file: [ ./.env.local ]   # 앱 환경변수 로딩 (.env.local은 '앱' 설정)
+    environment:
+      AVIEW_MODE: "local"         # 확실히 local 강제
+      REDIS_HOST: "redis"         # 컨테이너 DNS
+      TZ: "Asia/Seoul"
+      BASE_DIR: "/aview/data"     # 컨테이너 내부 경로로 override (로컬 .env 수정 없이 사용)
+    ports: [ "8003:8003" ]
+    # Windows 호스트 경로 ↔ 컨테이너 경로 매핑
+    # 예시: C:\temp\aview 를 컨테이너 /aview/data 로
+    volumes:
+      - "C:/tmp/aview:/aview/data"
+    restart: unless-stopped
+    user: "${AVIEW_UID:-1000}:${AVIEW_GID:-1000}"
+
+volumes:
+  redis-data-local:

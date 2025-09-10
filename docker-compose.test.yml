@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [ "redis-data-test:/data" ]
+    ports: [ "6379:6379" ]
+    restart: unless-stopped
+
+  aview:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on: [ redis ]
+    env_file: [ ./.env.test ]     # 앱 환경변수 로딩
+    environment:
+      AVIEW_MODE: "test"
+      REDIS_HOST: "redis"
+      TZ: "Asia/Seoul"
+      BASE_DIR: "/aview/data"     # 컨테이너 내부 경로 고정 권장
+    ports: [ "8003:8003" ]
+    # 호스트 /data1/aview/data  ↔ 컨테이너 /aview/data  공유
+    volumes:
+      - /data1/aview/data:/aview/data
+    restart: unless-stopped
+    user: "${AVIEW_UID:-1001}:${AVIEW_GID:-1001}"
+
+volumes:
+  redis-data-test:
