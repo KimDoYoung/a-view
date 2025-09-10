@@ -88,7 +88,7 @@ async def download_log_file():
     if os.path.exists(settings.LOG_FILE):
         return FileResponse(
             path=settings.LOG_FILE,
-            filename=f"application_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+            filename=f"aview_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
             media_type='text/plain'
         )
     else:

@@ -15,8 +15,8 @@ logs/
 *.log
 
 # 환경 설정 파일들 (보안상 중요한 것들은 제외)
-.env.local
-.env.real
+# .env.local
+# .env.real
 
 app/static/files/
 app/static/images/
