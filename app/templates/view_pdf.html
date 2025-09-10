@@ -102,7 +102,7 @@
                 <a :href="convertedUrl" target="_blank" class="btn btn-outline-primary btn-sm">
                     새 창에서 열기
                 </a>
-                <a :href="`/download?file_path=${encodeURIComponent(new URL(convertedUrl).pathname)}&filename=${encodeURIComponent('{{ original_filename }}')}`" class="btn btn-outline-secondary btn-sm">
+                <a :href="`/download?file_path=${encodeURIComponent(new URL(convertedUrl).pathname)}&filename=${encodeURIComponent('{{ original_filename.rsplit(".", 1)[0] if "." in original_filename else original_filename }}.pdf')}`" class="btn btn-outline-secondary btn-sm">
                     PDF 다운로드
                 </a>
                 <!-- 원본 파일 다운로드 버튼 -->

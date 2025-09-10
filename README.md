@@ -32,12 +32,12 @@
 4. example
    ```bash
     # 성공시
-    curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\11.docx&output=pdf"
-    {"success":true,"url":"http://127.0.0.1:8003/aview/pdf/5165f18545b0e73fd8b3e3bb69a236d8.pdf","message":"로칼 파일이 OutputFormat.PDF 형식으로 변환되었습니다"}
-    curl "http://localhost:8003/convert?url=http://user-host:8003/static/files/AssetERP/1.docx&output=pdf"
-    {"success":true,"url":"http://127.0.0.1:8003/aview/pdf/25115ce96ff4f71d9d8c66bf7d0d74da.pdf","message":"URL 문서가 OutputFormat.PDF 형식으로 변환 되었습니다"}    
+    curl "http://a-view-host:8003/convert?path=c:\\tmp\\sample\\11.docx&output=pdf"
+    {"success":true,"url":"http://a-view-host:8003/aview/pdf/5165f18545b0e73fd8b3e3bb69a236d8.pdf","message":"로칼 파일이 OutputFormat.PDF 형식으로 변환되었습니다"}
+    curl "http://a-view-host:8003/convert?url=http://user-host:8003/static/files/AssetERP/1.docx&output=pdf"
+    {"success":true,"url":"http://a-view-host:8003/aview/pdf/25115ce96ff4f71d9d8c66bf7d0d74da.pdf","message":"URL 문서가 OutputFormat.PDF 형식으로 변환 되었습니다"}    
     #  에러시
-    curl "http://localhost:8003/convert?path=c:\\tmp\\sample\\aa.docx&output=pdf"
+    curl "http://a-view-host:8003/convert?path=c:\\tmp\\sample\\aa.docx&output=pdf"
     {"success":false,"url":"","message":"입력 오류: 1 validation error for ConvertParams\npath\n  Value error, 파일이 존재하지 않습니다: c:\\tmp\\sample\\aa.docx [type=value_error, input_value='c:\\\\tmp\\\\sample\\\\aa.docx', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.11/v/value_error"}    
    ```
 
@@ -56,14 +56,6 @@
 | 이미지파일들(.jpg, .png)             | HTML        |
 | Markdown(.md)                     | HTML        |
 
-### view 테스트
-
-```bash
-http://localhost:8003/view?path=c:\\tmp\\sample\\11.docx
-```
-
-
-
 
 
 ## 설정
@@ -78,9 +70,9 @@ http://localhost:8003/view?path=c:\\tmp\\sample\\11.docx
 ```text
 a-view는 assertERP 시스템에서 호출한다. 즉 AssetERP에서   localhost:8003/aview?url=https://asserterp-host/files/a.xlsx와 같이 호출한다. 그러면 localhost:8003(a-view)에서 그 파일을 다운로드해서 libre를 이용하여 변환한 후에 보여줘야한다. 이것을 테스트하기 위해서 나는 AssetERP(자바베이스의 web application)을 대신하는 web-application을 만들 필요가 있는가? 아니면 그냥 a-view로 그것을 갈음하여 테스트 가능한가?
 ```
-- static/files/AssetERP에 파일 1.xlsx를 올려놓고 
+
 ```text
-http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xlsx
+http://a-view-host:8003/aview?url=http://asset-erp-user-host:8003/static/files/AssetERP/1.xlsx
 ```
 
 ## 설치
@@ -114,37 +106,3 @@ http://localhost:8003/aview?url=http://localhost:8003/static/files/AssetERP/1.xl
 9. async_test3.py : 여러 사용자가 동시에 view or convert 를 보낸다고 가정해서 test하는 프로그램을 작성해서 볼 수 없을까?
 10. my_test.html을 작성
 
-```test
-1. .mytest를 /convert 와 /view 를 테스트하기 위한 UI로 사용하고자 함
-2. static/files/AssetERP에 있는 파일들 목록을 리스트 영역(이하 AssetERP파일리스트)이 있어야함. 
-3. 2개의 api를 수행하기 위해서 파일을 업로드 할 수 있어야함. 
-4. 만약 파일이 업로드 된다면 그 파일을 static/files/AssetERP에 저장되어야함.(overwrite)
-5. 파일이 업로드 성공하면 AssetERP파일리스트 상단에 올린 파일명이 나와야 함.
-6. AssetERP파일리스트에서 파일을 1개 선택하면 4개의 input 란이 채워져야함 (예를 들어 abc.docx를 선택) 즉
-   - convert path : http:localhost:8003/convert?path=c:\\..static\\files\\AssetERP\\abc.docx&output=pdf
-
-run_test.html 의 작성
-1. ui (4:8로 수평분활)
-    - 4 영역
-    - config.FILES_DIR 안의 파일목록을 리스트 할 수 있는 list (파일명 앞에 checkbox)
-    - list 하단에 upload버튼, delete button(checked항목만 삭제), delete all button
-    - 8 영역
-    - convert, view 수평 radio ,default convert
-    - path, url 수평 radio, default path
-    - output (radio로 pdf, html) pdf default
-    - address input box
-    - run button
-2. 동작
-    - upload버튼 시 /aview/upload (멀티파일) config.FILES_DIR에 upload를 한 후 파일list refresh 최근것이 상단에 배치
-    - delete all, delete는 모두 지우기와 선택된 것 지우기
-    - convert/ view radio, path/url radio, filelist 선택 시 inputbox의 내용이 변경
-    - http://localhost:8003/convert(view)?url=http://localhost:8003/aview/files/abc.xlsx&output=pdf 문자열을 input box에 조합하여 표시
-    - run button 새로운 브라우저를 띄우면서 input_box 실행
-    - 주의 (선택된 파일이 office 문서이면 output radio는  disable)
-3. API
-GET  /aview/files          # 파일 목록 조회
-GET  /aview/files/{filename}  # 파일 다운로드
-POST /aview/upload         # 파일 업로드
-POST /aview/delete?filename         # 선택 파일 삭제
-POST /aview/delete-all     # 전체 파일 삭제
-```   
