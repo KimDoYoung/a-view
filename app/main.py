@@ -181,12 +181,47 @@ def shutdown_event(app: FastAPI):
 
 app = create_app()
 
-if __name__ == "__main__":
-    # 개발 중 shutdown 이벤트 테스트를 위해 reload=False
-    # 운영에서는 어차피 reload 옵션을 사용하지 않음
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8003,
-        reload=False  # shutdown_event 테스트를 위해 False로 설정
+def run_server():
+    is_https = (settings.PROTOCOL.lower() == "https") or settings.is_production
+
+    uvicorn_kwargs = dict(
+        app="main:app",  # 혹은 app 객체 자체
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.RELOAD,
+        # log_level= settings.LOG_LEVEL.lower(),  # 필요시
     )
+
+    if is_https:
+        cert = settings.SSL_CERT_FILE
+        key = settings.SSL_KEY_FILE
+        ca  = settings.SSL_CA_FILE
+
+        # 파일 존재 체크 (운영버그 방지)
+        if not cert or not Path(cert).exists():
+            raise FileNotFoundError(f"SSL_CERT_FILE not found: {cert}")
+        if not key or not Path(key).exists():
+            raise FileNotFoundError(f"SSL_KEY_FILE not found: {key}")
+
+        uvicorn_kwargs.update(
+            ssl_certfile=cert,
+            ssl_keyfile=key,
+        )
+        if settings.SSL_KEY_PASSWORD:
+            uvicorn_kwargs.update(ssl_keyfile_password=settings.SSL_KEY_PASSWORD)
+        if ca and Path(ca).exists():
+            uvicorn_kwargs.update(ssl_ca_certs=ca)
+
+    uvicorn.run(**uvicorn_kwargs)
+
+if __name__ == "__main__":
+    run_server()
+
+
+# if __name__ == "__main__":
+#     uvicorn.run(
+#         app,
+#         host="0.0.0.0",
+#         port=8003,
+#         reload=False  # shutdown_event 테스트를 위해 False로 설정
+#     )

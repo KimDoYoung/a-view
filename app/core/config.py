@@ -14,7 +14,7 @@ class Config:
         load_dotenv(dotenv_path=f'.env.{self.PROFILE_NAME}')
         
         # 애플리케이션 기본 설정
-        self.APP_NAME = os.getenv('APP_NAME', 'A-View Document Processor')
+        self.APP_NAME = os.getenv('APP_NAME', 'A-View Document Viewer')
         self.VERSION = os.getenv('VERSION', '1.0.0')
         self.DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
         
@@ -24,6 +24,12 @@ class Config:
         self.PORT = int(os.getenv('PORT', '8003'))
         self.RELOAD = os.getenv('RELOAD', 'true').lower() == 'true'
         
+        # SSL 설정
+        self.SSL_CERT_FILE = os.getenv('SSL_CERT_FILE', None)
+        self.SSL_KEY_FILE = os.getenv('SSL_KEY_FILE', None)
+        self.SSL_KEY_PASSWORD = os.getenv('SSL_KEY_PASSWORD', None)  # 필요 시
+        self.SSL_CA_FILE = os.getenv('SSL_CA_FILE', None)           
+
         # Redis 설정
         self.REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
         self.REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
@@ -49,10 +55,6 @@ class Config:
         
         # 보안 설정
         self.ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')
-        # self.ALLOWED_FILE_TYPES = os.getenv(
-        #     'ALLOWED_FILE_TYPES', 
-        #     '.doc,.docx,.odt,.rtf,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,.pdf,.png,.jpg'
-        # ).split(',')
         
         # 로그 설정
         self.LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
