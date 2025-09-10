@@ -5,7 +5,7 @@ import time
 import sqlite3
 from datetime import datetime, timedelta
 
-from core.config import settings
+from app.core.config import settings
 
 class StatsScheduler:
     """통계 스케줄러"""

@@ -15,8 +15,8 @@
 from fastapi import APIRouter, Query, Request
 from datetime import date
 from pathlib import Path
-from core.utils import check_libreoffice
-from core.config import settings
+from app.core.utils import check_libreoffice
+from app.core.config import settings
 
 router = APIRouter()
 

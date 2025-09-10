@@ -7,21 +7,26 @@ import signal
 import sys
 from pathlib import Path
 
+# 프로젝트 루트 디렉토리를 sys.path에 추가 (python ./app/main.py 실행을 위해)
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import redis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.core.stat_scheduler import StatsScheduler
 from app.core.stats_db import StatsDatabase
-from core.logger import get_logger
-from core.config import settings
+from app.core.logger import get_logger
+from app.core.config import settings
 
-from endpoints.home_routes import router as home_router
-from endpoints.aview_routes import router as aview_router
-from endpoints.cache_routes import router as cache_router
-from endpoints.stats_routes import router as stats_router
+from app.endpoints.home_routes import router as home_router
+from app.endpoints.aview_routes import router as aview_router
+from app.endpoints.cache_routes import router as cache_router
+from app.endpoints.stats_routes import router as stats_router
 
-from core.utils import (
+from app.core.utils import (
     check_libreoffice,
     cleanup_old_cache_files
 )
@@ -182,14 +187,14 @@ def shutdown_event(app: FastAPI):
 app = create_app()
 
 def run_server():
-    is_https = (settings.PROTOCOL.lower() == "https") or settings.is_production
+    is_https = (settings.PROTOCOL.lower() == "https")
 
     uvicorn_kwargs = dict(
         app="main:app",  # 혹은 app 객체 자체
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.RELOAD,
-        # log_level= settings.LOG_LEVEL.lower(),  # 필요시
+        log_level=settings.LOG_LEVEL.lower(),  # 필요시
     )
 
     if is_https:
@@ -216,12 +221,3 @@ def run_server():
 
 if __name__ == "__main__":
     run_server()
-
-
-# if __name__ == "__main__":
-#     uvicorn.run(
-#         app,
-#         host="0.0.0.0",
-#         port=8003,
-#         reload=False  # shutdown_event 테스트를 위해 False로 설정
-#     )
