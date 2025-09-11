@@ -282,11 +282,15 @@ async def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
     # 출력 디렉토리 생성
     CONVERTED_DIR.mkdir(parents=True, exist_ok=True)
     logger.info(f"출력 디렉토리: {CONVERTED_DIR}")
-    
+    # LibreOffice 임시 프로필 디렉토리 (Linux/Windows 모두 문제 없음)
+    LO_PROFILE_DIR = Path("/tmp/lo_profile")  # Linux/Windows 모두 문제 없음
+    LO_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+
     # LibreOffice 변환 명령
     cmd = [
         str(libre_office),
-        "--headless",
+        "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault","--nocrashreport",
+        f"-env:UserInstallation=file://{LO_PROFILE_DIR.as_posix()}",
         "--convert-to", "pdf",
         "--outdir", str(CONVERTED_DIR),
         str(input_path)

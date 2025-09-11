@@ -4,7 +4,7 @@
 
 - [AssetERP](http://www.k-fs.co.kr/product2.do)에서는 구글의 gview를 이용해서 excel, word, powerpoint 파일을 보여주었는데, 구글이 더 이상 gview서비스를 원활히 지원하지 않아서 
 자체적으로 개발하기로 하였습니다.
-- 2가지 방식을 고려했는데, excel, word, powerpoint를 해석하는 1)**개별 파이썬 라이브러리를 사용하여 변환하는 방식**과 **libreoffice 라이브러리를 사용하는 방식**임
+- 2가지 방식을 고려했는데, excel, word, powerpoint를 해석하는 1)**개별 파이썬 라이브러리를 사용하여 변환하는 방식**과 2)**libreoffice 라이브러리를 사용하는 방식**임
 - 본 프로젝트는 libreoffice 라이브러리를 사용하여 개발하기로 하였습니다.
 
 ## 설계
@@ -88,13 +88,32 @@
 - 개발(윈도우)에도 docker가 설치되어 있음.
 - 리눅스 테스트 서버에 사용자 aview를 생성, 홈 디렉토리는 /data1/aview 임
 - 운영 리눅스에는 SSL파일을 .env.real에 기술하여야함.
-
+- 기본명령어들
 ```bash
 docker compose -f docker-compose.local.yml build
 # 기동
 docker compose -f docker-compose.local.yml up -d
 # 로그
 docker compose -f docker-compose.local.yml logs -f aview
+```
+
+### deploy.sh을 통한 docker 배포
+
+- docker명령어를 모아서 deploy.sh을 작성함.
+- 사용법
+```bash
+# 기본 사용
+./deploy.sh # 도움말을 볼 수 있음
+./deploy.sh up local                    # 일반 시작
+./deploy.sh build test --no-cache       # 캐시 없이 빌드
+./deploy.sh up local --force-recreate   # 강제 재생성
+
+# 완전 삭제
+./deploy.sh clean-all local             # 모든 aview 리소스 삭제
+
+# 명령어 확인만
+./deploy.sh build local --dry-run       # 실행할 명령어만 출력
+./deploy.sh clean-all local --dry-run   # 삭제할 명령어들 출력
 ```
 
 

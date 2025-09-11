@@ -190,8 +190,8 @@ def run_server():
     is_https = (settings.PROTOCOL.lower() == "https")
 
     uvicorn_kwargs = dict(
-        app="main:app",  # 혹은 app 객체 자체
-        host=settings.HOST,
+        app="app.main:app",  # 혹은 app 객체 자체
+        host="0.0.0.0",
         port=settings.PORT,
         reload=settings.RELOAD,
         log_level=settings.LOG_LEVEL.lower(),  # 필요시

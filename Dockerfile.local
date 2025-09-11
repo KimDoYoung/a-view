@@ -28,4 +28,5 @@ EXPOSE 8003
 ENV AVIEW_MODE=local
 ENV VIRTUAL_ENV=/aview/.venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONPATH=/aview
 CMD ["python", "-m", "app.main"]
