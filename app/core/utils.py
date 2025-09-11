@@ -954,11 +954,15 @@ async def convert_with_libreoffice_async(input_path: Path, html_path: Path) -> P
             status_code=500,
             detail="LibreOffice 실행 파일을 찾을 수 없습니다"
         )
-    
+    LO_PROFILE_DIR = Path("/tmp/lo_profile")  # Linux/Windows 모두 문제 없음
+    LO_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+    lo_profile = LO_PROFILE_DIR.resolve()
+    logger.info(f"lo_profile 경로: {lo_profile}")    
     # LibreOffice 변환 명령
     cmd = [
         str(libre_office),
-        "--headless",
+        "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault","--nocrashreport",
+        f"-env:UserInstallation=file:///{lo_profile.as_posix()}",
         "--convert-to", "html",
         "--outdir", str(CONVERTED_DIR),
         str(input_path)
