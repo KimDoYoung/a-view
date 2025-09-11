@@ -13,6 +13,7 @@ dependencies = [
     "markdown>=3.9",
     "pandas>=2.3.2",
     "pillow>=11.3.0",
+    "psutil>=7.0.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "pygments>=2.19.2",

@@ -7,6 +7,8 @@ import signal
 import sys
 from pathlib import Path
 
+from app.core.sys_info import get_environment_summary
+
 # 프로젝트 루트 디렉토리를 sys.path에 추가 (python ./app/main.py 실행을 위해)
 project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
@@ -139,7 +141,13 @@ def startup_event(app: FastAPI):
     scheduler = StatsScheduler(stats_manager)
     scheduler.start_scheduler()
     app.state.scheduler = scheduler  # app.state에 저장
-    
+    env_summary = get_environment_summary()
+    logger.info("-----------------------------------------------------------------")
+    logger.info("a-view 환경정보")
+    logger.info("-----------------------------------------------------------------")
+    logger.info(f"Application started on: {env_summary}")
+    logger.info("-----------------------------------------------------------------")
+
     logger.info(f"✅ 로그 디렉토리: {settings.LOG_DIR}, 레벨 : {settings.LOG_LEVEL}")
     logger.info(f"✅ 캐시 디렉토리: {settings.CACHE_DIR}")
     logger.info(f"✅ HTML Template 디렉토리: {TEMPLATE_DIR}")
