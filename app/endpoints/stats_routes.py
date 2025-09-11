@@ -13,7 +13,7 @@
 버전: 1.0
 """
 from fastapi import APIRouter, Query, Request
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from app.core.utils import check_libreoffice
 from app.core.config import settings
@@ -62,7 +62,7 @@ async def get_system_status(request: Request):
             "cacheFiles": cache_files,
             "cacheSize": cache_size,
             "dbSize": db_size,
-            "timestamp": date.today().isoformat()
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
     except Exception as e:
         return {

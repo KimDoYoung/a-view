@@ -68,7 +68,7 @@
         <!-- 시스템 상태 대시보드 -->
         <div class="row mb-4">
             <div class="col-12">
-                <h5 class="mb-3">📊 시스템 상태</h5>
+                <h5 class="mb-3">📊 시스템 상태 (<small class="text-muted mx-1" x-text="systemStatus.timestamp"></small>)</h5>
             </div>
             
             <!-- 시스템 상태 카드들 -->
@@ -360,7 +360,8 @@
                     libreVersion: 'Unknown',
                     cacheFiles: 0,
                     cacheSize: 0,
-                    dbSize: 0
+                    dbSize: 0,
+                    timestamp: ''
                 },
                 stats: {},
                 

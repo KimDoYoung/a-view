@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TZ=Asia/Seoul
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice libreoffice-writer libreoffice-calc libreoffice-impress \
+    fonts-noto-cjk fonts-noto-cjk-extra fonts-noto-color-emoji \
+    locales ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN sed -i 's/# *ko_KR.UTF-8 UTF-8/ko_KR.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen
+ENV LANG=ko_KR.UTF-8 LC_ALL=ko_KR.UTF-8
+
+WORKDIR /aview
+
+# 의존성 (pyproject/uv.lock 또는 requirements.txt)
+COPY pyproject.toml uv.lock* requirements.txt* ./
+RUN if [ -f pyproject.toml ]; then uv sync --frozen --no-dev; \
+    elif [ -f requirements.txt ]; then uv pip install --system -r requirements.txt; fi
+
+COPY . .
+
+EXPOSE 8003
+ENV AVIEW_MODE=local
+ENV VIRTUAL_ENV=/aview/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONPATH=/aview
+CMD ["python", "-m", "app.main"]

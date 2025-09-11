@@ -78,8 +78,10 @@ def check_libreoffice() -> Tuple[bool, str]:
     cmd = [str(exe), "--version"]
     try:
         out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=10).strip()
+        #out을 space로 분리해서 0,1번째 요소만
+        major_version, minor_version = out.split(" ")[0:2]
         # 일반적으로 "LibreOffice 24.x.x.x ..." 형태로 나옵니다.
-        return True, out
+        return True, major_version + "." + minor_version
     except subprocess.CalledProcessError as e:
         return False, f"soffice 호출 실패: {e.output.strip() if e.output else e}"
     except Exception as e:
