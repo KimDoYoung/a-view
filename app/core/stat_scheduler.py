@@ -29,8 +29,7 @@ class StatsScheduler:
         self.running = True
         self.scheduler_thread = threading.Thread(target=self._run_scheduler, daemon=True)
         self.scheduler_thread.start()
-        
-        print("📅 통계 스케줄러 시작됨")
+    
     
     def stop_scheduler(self):
         """스케줄러 중지"""

@@ -17,6 +17,7 @@ from datetime import date, datetime
 from pathlib import Path
 from app.core.utils import check_libreoffice
 from app.core.config import settings
+from app.core.sys_info import system_info
 
 router = APIRouter()
 
@@ -54,6 +55,9 @@ async def get_system_status(request: Request):
         db_path = Path(settings.STATS_DB_PATH)
         db_size = round(db_path.stat().st_size / 1024 / 1024, 2) if db_path.exists() else 0
         
+        # 시스템 INFO
+        sys_info = system_info.get_system_info()
+
         return {
             "redis": redis_status,
             "redisMemory": redis_memory,
@@ -62,7 +66,8 @@ async def get_system_status(request: Request):
             "cacheFiles": cache_files,
             "cacheSize": cache_size,
             "dbSize": db_size,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "systemInfo": sys_info
         }
     except Exception as e:
         return {

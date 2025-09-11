@@ -37,6 +37,10 @@
         .stat-card:hover {
             transform: translateY(-2px);
         }
+        .env-badge {
+            font-size: 0.75em;
+            padding: 0.25rem 0.5rem;
+        }        
     </style>
 </head>
 <body>
@@ -52,10 +56,10 @@
                     <i class="bi bi-journal-text me-1"></i>
                     Log보기
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" @click="loadStats()">
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.location.reload()">
                     <i class="bi bi-arrow-clockwise me-1"></i>
                     새로고침
-                </button>
+                </button>                
                 <button class="btn btn-outline-primary btn-sm" onclick="window.open('/about', '_self')">
                     <i class="bi bi-info-circle me-1"></i>
                     A-View 소개
@@ -67,6 +71,83 @@
     <div class="container mt-4" x-data="app()">
         <!-- 시스템 상태 대시보드 -->
         <div class="row mb-4">
+
+            <!-- 시스템 환경 정보 -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body py-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <h6 class="mb-0 text-muted">🖥️ 시스템 환경</h6>
+                            </div>
+                            <div class="col-md-10">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge env-badge me-2" 
+                                                x-bind:class="{
+                                                    'bg-success': systemStatus.systemInfo?.environment === 'local' || systemStatus.systemInfo?.environment === 'windows_local',
+                                                    'bg-info': systemStatus.systemInfo?.environment === 'docker',
+                                                    'bg-warning': systemStatus.systemInfo?.environment === 'kubernetes'
+                                                }"
+                                                x-text="getEnvironmentText(systemStatus.systemInfo?.environment)"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">OS</small><br>
+                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.os + ' ' + systemStatus.systemInfo?.basic?.os_version"></span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Host</small><br>
+                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.hostname"></span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">IP</small><br>
+                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.network?.local_ip"></span>
+                                    </div>
+                                </div>
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-3">
+                                        <small class="text-muted">CPU</small><br>
+                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.hardware?.cpu_cores + 'C/' + systemStatus.systemInfo?.hardware?.cpu_threads + 'T'"></span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Memory</small><br>
+                                        <span class="fw-bold" 
+                                            x-bind:class="{
+                                                'text-success': systemStatus.systemInfo?.hardware?.memory_percent < 50,
+                                                'text-warning': systemStatus.systemInfo?.hardware?.memory_percent >= 50 && systemStatus.systemInfo?.hardware?.memory_percent < 80,
+                                                'text-danger': systemStatus.systemInfo?.hardware?.memory_percent >= 80
+                                            }"
+                                            x-text="systemStatus.systemInfo?.hardware?.memory_percent + '%'"></span>
+                                        <small class="text-muted">
+                                            (<span x-text="systemStatus.systemInfo?.hardware?.memory_available_gb"></span>/<span x-text="systemStatus.systemInfo?.hardware?.memory_total_gb"></span>GB)
+                                        </small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Disk</small><br>
+                                        <span class="fw-bold"
+                                            x-bind:class="{
+                                                'text-success': systemStatus.systemInfo?.hardware?.disk_percent < 70,
+                                                'text-warning': systemStatus.systemInfo?.hardware?.disk_percent >= 70 && systemStatus.systemInfo?.hardware?.disk_percent < 90,
+                                                'text-danger': systemStatus.systemInfo?.hardware?.disk_percent >= 90
+                                            }"
+                                            x-text="systemStatus.systemInfo?.hardware?.disk_percent + '%'"></span>
+                                        <small class="text-muted">
+                                            (<span x-text="systemStatus.systemInfo?.hardware?.disk_free_gb"></span>/<span x-text="systemStatus.systemInfo?.hardware?.disk_total_gb"></span>GB)
+                                        </small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Architecture</small><br>
+                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.architecture"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 시스템 상태 카드 -->
             <div class="col-12">
                 <h5 class="mb-3">📊 시스템 상태 (<small class="text-muted mx-1" x-text="systemStatus.timestamp"></small>)</h5>
             </div>
@@ -361,20 +442,37 @@
                     cacheFiles: 0,
                     cacheSize: 0,
                     dbSize: 0,
-                    timestamp: ''
+                    timestamp: '',
+                    systemInfo:{}
                 },
                 stats: {},
                 
+                getEnvironmentText(env) {
+                    switch(env) {
+                        case 'local':
+                        case 'windows_local':
+                            return 'Local';
+                        case 'docker':
+                            return 'Docker';
+                        case 'kubernetes':
+                            return 'K8s';
+                        default:
+                            return 'Unknown';
+                    }
+                },
+
                 async init() {
                     await this.loadSystemStatus();
                     await this.loadStats();
                 },
                 
+
                 async loadSystemStatus() {
                     try {
                         const response = await fetch('/stats/system-status');
                         if (response.ok) {
                             this.systemStatus = await response.json();
+                            console.log('시스템 상태 로드 완료:', this.systemStatus);
                         }
                     } catch (error) {
                         console.error('시스템 상태 로드 실패:', error);
