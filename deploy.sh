@@ -333,10 +333,11 @@ main() {
             if [[ ${options[dry_run]} == "true" ]]; then
                 warn "[DRY RUN] aview 관련 모든 리소스 삭제 명령들을 출력합니다:"
                 info "[DRY RUN] docker compose -f $(get_compose_file $env) down -v --remove-orphans"
-                info "[DRY RUN] docker rm -f \$(docker ps -aq --filter 'name=aview')"
-                info "[DRY RUN] docker rmi -f \$(docker images --filter 'reference=*aview*' -q)"
-                info "[DRY RUN] docker volume rm -f \$(docker volume ls --filter 'name=aview' -q)"
-                info "[DRY RUN] docker network rm \$(docker network ls --filter 'name=aview' -q)"
+                info "[DRY RUN] docker rm -f \$(docker ps -aq --filter 'name=aview' --filter 'name=a-view')"
+                info "[DRY RUN] docker rmi -f \$(docker images --filter 'reference=*aview*' --filter 'reference=*a-view*' -q)"
+                info "[DRY RUN] docker volume rm -f \$(docker volume ls --filter 'name=aview' --filter 'name=a-view' -q)"
+                info "[DRY RUN] docker network rm \$(docker network ls --filter 'name=aview' --filter 'name=a-view' -q)"
+
             else
                 clean_all_aview $env
             fi
