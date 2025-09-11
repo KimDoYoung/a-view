@@ -68,80 +68,61 @@
         </div>
     </nav>
 
-    <div class="container mt-4" x-data="app()">
+    <div class="container mt-2" x-data="app()">
         <!-- 시스템 상태 대시보드 -->
-        <div class="row mb-4">
-
+        <div class="row mb-3">
             <!-- 시스템 환경 정보 -->
             <div class="col-12">
-                <div class="card">
-                    <div class="card-body py-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-2">
-                                <h6 class="mb-0 text-muted">🖥️ 시스템 환경</h6>
+                <h5 class="mb-3">🖥️ 시스템 환경</h5>
+            </div>
+            <div class="col-12 mb-3">
+                <div class="card shadow-sm" style="background-color: #faf9f0;">
+                    <div class="card-body py-2">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-1">
+                                <span class="badge env-badge" 
+                                    x-bind:class="{
+                                        'bg-success': systemStatus.systemInfo?.environment === 'local' || systemStatus.systemInfo?.environment === 'windows_local',
+                                        'bg-info': systemStatus.systemInfo?.environment === 'docker',
+                                        'bg-warning': systemStatus.systemInfo?.environment === 'kubernetes'
+                                    }"
+                                    x-text="getEnvironmentText(systemStatus.systemInfo?.environment)"></span>
                             </div>
-                            <div class="col-md-10">
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <div class="d-flex align-items-center">
-                                            <span class="badge env-badge me-2" 
-                                                x-bind:class="{
-                                                    'bg-success': systemStatus.systemInfo?.environment === 'local' || systemStatus.systemInfo?.environment === 'windows_local',
-                                                    'bg-info': systemStatus.systemInfo?.environment === 'docker',
-                                                    'bg-warning': systemStatus.systemInfo?.environment === 'kubernetes'
-                                                }"
-                                                x-text="getEnvironmentText(systemStatus.systemInfo?.environment)"></span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <small class="text-muted">OS</small><br>
-                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.os + ' ' + systemStatus.systemInfo?.basic?.os_version"></span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <small class="text-muted">Host</small><br>
-                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.hostname"></span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <small class="text-muted">IP</small><br>
-                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.network?.local_ip"></span>
-                                    </div>
-                                </div>
-                                <div class="row g-3 mt-1">
-                                    <div class="col-md-3">
-                                        <small class="text-muted">CPU</small><br>
-                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.hardware?.cpu_cores + 'C/' + systemStatus.systemInfo?.hardware?.cpu_threads + 'T'"></span>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <small class="text-muted">Memory</small><br>
-                                        <span class="fw-bold" 
-                                            x-bind:class="{
-                                                'text-success': systemStatus.systemInfo?.hardware?.memory_percent < 50,
-                                                'text-warning': systemStatus.systemInfo?.hardware?.memory_percent >= 50 && systemStatus.systemInfo?.hardware?.memory_percent < 80,
-                                                'text-danger': systemStatus.systemInfo?.hardware?.memory_percent >= 80
-                                            }"
-                                            x-text="systemStatus.systemInfo?.hardware?.memory_percent + '%'"></span>
-                                        <small class="text-muted">
-                                            (<span x-text="systemStatus.systemInfo?.hardware?.memory_available_gb"></span>/<span x-text="systemStatus.systemInfo?.hardware?.memory_total_gb"></span>GB)
-                                        </small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <small class="text-muted">Disk</small><br>
-                                        <span class="fw-bold"
-                                            x-bind:class="{
-                                                'text-success': systemStatus.systemInfo?.hardware?.disk_percent < 70,
-                                                'text-warning': systemStatus.systemInfo?.hardware?.disk_percent >= 70 && systemStatus.systemInfo?.hardware?.disk_percent < 90,
-                                                'text-danger': systemStatus.systemInfo?.hardware?.disk_percent >= 90
-                                            }"
-                                            x-text="systemStatus.systemInfo?.hardware?.disk_percent + '%'"></span>
-                                        <small class="text-muted">
-                                            (<span x-text="systemStatus.systemInfo?.hardware?.disk_free_gb"></span>/<span x-text="systemStatus.systemInfo?.hardware?.disk_total_gb"></span>GB)
-                                        </small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <small class="text-muted">Architecture</small><br>
-                                        <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.architecture"></span>
-                                    </div>
-                                </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">OS</small><br>
+                                <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.os + ' ' + systemStatus.systemInfo?.basic?.os_version"></span>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">Host</small><br>
+                                <span class="fw-bold" x-text="systemStatus.systemInfo?.basic?.hostname"></span>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">IP</small><br>
+                                <span class="fw-bold" x-text="systemStatus.systemInfo?.network?.local_ip"></span>
+                            </div>
+                            <div class="col-md-1">
+                                <small class="text-muted">CPU</small><br>
+                                <span class="fw-bold" x-text="systemStatus.systemInfo?.hardware?.cpu_cores + 'C/' + systemStatus.systemInfo?.hardware?.cpu_threads + 'T'"></span>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">Memory</small><br>
+                                <span class="fw-bold" 
+                                    x-bind:class="{
+                                        'text-success': systemStatus.systemInfo?.hardware?.memory_percent < 50,
+                                        'text-warning': systemStatus.systemInfo?.hardware?.memory_percent >= 50 && systemStatus.systemInfo?.hardware?.memory_percent < 80,
+                                        'text-danger': systemStatus.systemInfo?.hardware?.memory_percent >= 80
+                                    }"
+                                    x-text="systemStatus.systemInfo?.hardware?.memory_percent + '% (' + systemStatus.systemInfo?.hardware?.memory_available_gb + '/' + systemStatus.systemInfo?.hardware?.memory_total_gb + 'GB)'"></span>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">Disk</small><br>
+                                <span class="fw-bold"
+                                    x-bind:class="{
+                                        'text-success': systemStatus.systemInfo?.hardware?.disk_percent < 70,
+                                        'text-warning': systemStatus.systemInfo?.hardware?.disk_percent >= 70 && systemStatus.systemInfo?.hardware?.disk_percent < 90,
+                                        'text-danger': systemStatus.systemInfo?.hardware?.disk_percent >= 90
+                                    }"
+                                    x-text="systemStatus.systemInfo?.hardware?.disk_percent + '% (' + systemStatus.systemInfo?.hardware?.disk_free_gb + '/' + systemStatus.systemInfo?.hardware?.disk_total_gb + 'GB)'"></span>
                             </div>
                         </div>
                     </div>
@@ -221,7 +202,7 @@
         </div>
 
         <!-- 통계 정보 -->
-        <div class="row mb-4" x-show="stats && Object.keys(stats).length > 0">
+        <div class="row mb-3" x-show="stats && Object.keys(stats).length > 0">
             <div class="col-12">
                 <h5 class="mb-3">📈 변환 통계 (최근 7일)</h5>
             </div>
