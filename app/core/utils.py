@@ -285,12 +285,12 @@ async def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
     # LibreOffice 임시 프로필 디렉토리 (Linux/Windows 모두 문제 없음)
     LO_PROFILE_DIR = Path("/tmp/lo_profile")  # Linux/Windows 모두 문제 없음
     LO_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-
+    lo_profile = LO_PROFILE_DIR.resolve()
     # LibreOffice 변환 명령
     cmd = [
         str(libre_office),
         "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault","--nocrashreport",
-        f"-env:UserInstallation=file://{LO_PROFILE_DIR.as_posix()}",
+        f"-env:UserInstallation=file:///{lo_profile.as_posix()}",
         "--convert-to", "pdf",
         "--outdir", str(CONVERTED_DIR),
         str(input_path)
@@ -897,11 +897,16 @@ def convert_with_libreoffice(input_path: Path, html_path: Path) -> Path:
             status_code=500,
             detail="LibreOffice 실행 파일을 찾을 수 없습니다"
         )
-    
+
+    LO_PROFILE_DIR = Path("/tmp/lo_profile")  # Linux/Windows 모두 문제 없음
+    LO_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+    lo_profile = LO_PROFILE_DIR.resolve()
+
     # LibreOffice 변환 명령
     cmd = [
         str(libre_office),
-        "--headless",
+        "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault","--nocrashreport",
+        f"-env:UserInstallation=file:///{lo_profile.as_posix()}",
         "--convert-to", "html",
         "--outdir", str(CONVERTED_DIR),
         str(input_path)
