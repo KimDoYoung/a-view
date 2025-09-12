@@ -81,7 +81,7 @@
                             
                             <!-- 파일 관리 버튼 -->
                             <div class="row g-2">
-                                <input type="file" class="d-none" id="fileUpload" multiple @change="uploadFiles($event)">
+                                <input type="file" class="d-none" id="fileUpload" multiple @change="uploadFiles($event)" aria-label="파일 선택">
                                 <div class="col-4">
                                     <button class="btn btn-primary w-100 btn-sm" onclick="document.getElementById('fileUpload').click()">
                                         <i class="bi bi-upload me-1"></i>
