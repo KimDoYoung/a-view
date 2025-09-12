@@ -1,0 +1,33 @@
+/* A-View 커스텀 스타일 */
+
+/* 시스템 환경 정보 카드 */
+.system-env-card {
+    background-color: #faf9f0;
+}
+
+/* 시스템 결과 메시지 스타일 */
+.system-result-message {
+    white-space: pre-wrap;
+    font-size: 0.8em;
+}
+
+/* 환경 배지 색상 */
+.env-badge-local {
+    background-color: #198754;
+    color: white;
+}
+
+.env-badge-docker {
+    background-color: #0dcaf0;
+    color: white;
+}
+
+.env-badge-kubernetes {
+    background-color: #ffc107;
+    color: black;
+}
+
+/* 에러 페이지 스타일 */
+.error-title {
+    color: #2c3e50;
+}
