@@ -414,8 +414,9 @@ def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str =
         file_size = pdf_path.stat().st_size
         file_size_mb = file_size / (1024 * 1024)
         
-        # PDF 파일의 상대 경로 생성 (정적 파일 서빙용)
+        # PDF 파일의 웹 서버 URL 생성 (정적 파일 서빙용)
         pdf_filename = pdf_path.name
+        pdf_url = f"/aview/pdf/{pdf_filename}"  # aview_routes.py의 /pdf/{filename} 엔드포인트 사용
         
         # PDF 메타데이터 추출 시도 (선택적)
         pdf_info = {}
@@ -454,13 +455,13 @@ def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str =
         html_content = template.render(
             filename=display_filename,
             original_filename=display_filename,
-            pdf_path=str(pdf_path),  # 절대 경로
+            pdf_url=pdf_url,  # 웹 서버 URL 사용
             pdf_filename=pdf_filename,
             file_size=file_size,
             file_size_mb=round(file_size_mb, 2),
             pdf_info=pdf_info
         )
-        
+        logger.debug
         # HTML 파일로 저장 (UTF-8 인코딩)
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
@@ -485,6 +486,9 @@ def convert_basic_pdf_to_html(pdf_path: Path, html_path: Path, original_filename
         file_size_mb = file_size / (1024 * 1024)
         pdf_filename = pdf_path.name
         
+        # PDF 파일의 웹 서버 URL 생성
+        pdf_url = f"/pdf/{pdf_filename}"
+        
         # Jinja2 템플릿 로드
         current_dir = Path(__file__).parent.parent  # app 디렉토리
         template_dir = current_dir / "templates"
@@ -501,7 +505,7 @@ def convert_basic_pdf_to_html(pdf_path: Path, html_path: Path, original_filename
         html_content = template.render(
             filename=display_filename,
             original_filename=display_filename,
-            pdf_path=str(pdf_path),
+            pdf_url=pdf_url,  # 웹 서버 URL 사용
             pdf_filename=pdf_filename,
             file_size=file_size,
             file_size_mb=round(file_size_mb, 2),
