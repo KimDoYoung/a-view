@@ -93,19 +93,41 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .toggle-header-btn:hover {
             background: #0b5ed7;
-            transform: scale(1.05);
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .toggle-header-btn:active {
+            transform: scale(0.95);
+            transition: all 0.1s ease;
         }
         .toggle-header-btn i {
             color: white;
             font-size: 1.1rem;
-            transition: transform 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        .toggle-header-btn.collapsed {
+            background: #28a745;
+            animation: pulseCollapsed 2s ease-in-out infinite;
+        }
+        .toggle-header-btn.collapsed:hover {
+            background: #218838;
+            transform: scale(1.1) rotate(-5deg);
         }
         .toggle-header-btn.collapsed i {
-            transform: rotate(180deg);
+            transform: rotateX(180deg) scale(1.1);
+        }
+        
+        @keyframes pulseCollapsed {
+            0%, 100% {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+            50% {
+                box-shadow: 0 4px 16px rgba(40, 167, 69, 0.4);
+            }
         }
         @media (max-width: 768px) {
             .pdf-container {
@@ -231,16 +253,28 @@
                 // 현재 헤더가 숨겨진 상태 → 보이도록 변경
                 header.classList.remove('collapsed');
                 toggleBtn.classList.remove('collapsed');
-                toggleIcon.className = 'bi bi-chevron-up';  // 헤더 보임 = 이제 "위로 접기(숨기기)" 가능
+                
+                // 아이콘 변경: down → up
+                if (toggleIcon.classList.contains('bi-chevron-down')) {
+                    toggleIcon.classList.replace('bi-chevron-down', 'bi-chevron-up');
+                }
+                
                 toggleBtn.title = '헤더 접기';
                 toggleBtn.setAttribute('aria-label', '헤더 접기');
+                console.log('헤더 보임 - 아이콘: chevron-up');
             } else {
                 // 현재 헤더가 보이는 상태 → 숨기도록 변경
                 header.classList.add('collapsed');
                 toggleBtn.classList.add('collapsed');
-                toggleIcon.className = 'bi bi-chevron-down';  // 헤더 숨김 = 이제 "아래로 펼치기(보이기)" 가능
+                
+                // 아이콘 변경: up → down
+                if (toggleIcon.classList.contains('bi-chevron-up')) {
+                    toggleIcon.classList.replace('bi-chevron-up', 'bi-chevron-down');
+                }
+                
                 toggleBtn.title = '헤더 펼치기';
                 toggleBtn.setAttribute('aria-label', '헤더 펼치기');
+                console.log('헤더 숨김 - 아이콘: chevron-down');
             }
         }
         
