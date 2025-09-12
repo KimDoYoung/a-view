@@ -42,20 +42,20 @@ SUPPORTED_EXTENSIONS = VIEWABLE_EXTENSION
 # 확장자별 처리 방식 매핑 (향후 FILE_TYPE_CONFIG 전환용)
 EXTENSION_HANDLER_MAP = {
     # 텍스트 파일
-    '.txt': 'convert_txt_to_html',
-    '.md': 'convert_md_to_html',
+    '.txt': 'view_txt_to_html',
+    '.md': 'view_md_to_html',
     
     # 이미지 파일
-    '.png': 'convert_image_to_html',
-    '.jpg': 'convert_image_to_html',
-    '.jpeg': 'convert_image_to_html',
-    '.gif': 'convert_image_to_html',
-    '.bmp': 'convert_image_to_html',
-    '.tiff': 'convert_image_to_html',
-    '.webp': 'convert_image_to_html',
+    '.png': 'view_image_to_html',
+    '.jpg': 'view_image_to_html',
+    '.jpeg': 'view_image_to_html',
+    '.gif': 'view_image_to_html',
+    '.bmp': 'view_image_to_html',
+    '.tiff': 'view_image_to_html',
+    '.webp': 'view_image_to_html',
     
     # CSV 파일 (특별 처리)
-    '.csv': 'convert_csv_to_html',
+    '.csv': 'view_csv_to_html',
     
     # 오피스 파일들 (LibreOffice 처리)
     '.doc': 'convert_with_libreoffice',

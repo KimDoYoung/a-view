@@ -5,8 +5,6 @@ View Library
 """
 
 import csv
-import os
-import subprocess
 from io import StringIO
 from pathlib import Path
 from typing import Tuple
@@ -16,7 +14,9 @@ from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
 
 from app.core.config import Config
-from app.core.logger import logger
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 async def get_cached_pdf(redis_client: redis.Redis, url: str, settings: Config) -> Tuple[Path, str]:
@@ -37,7 +37,7 @@ async def get_cached_pdf(redis_client: redis.Redis, url: str, settings: Config) 
     return pdf_path, original_filename
 
 
-def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_pdf_to_html(pdf_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     PDF 파일을 HTML로 감싸서 브라우저에서 볼 수 있도록 함
     브라우저의 내장 PDF 뷰어를 사용
@@ -106,10 +106,10 @@ def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename: str 
     except Exception as e:
         logger.error(f"PDF를 HTML로 변환 실패: {str(e)}")
         # 실패 시 기본 구현 사용
-        return convert_basic_pdf_to_html(pdf_path, html_path, original_filename)
+        return view_basic_pdf_to_html(pdf_path, html_path, original_filename)
 
 
-def convert_basic_pdf_to_html(pdf_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_basic_pdf_to_html(pdf_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     기본 PDF HTML 변환 (메타데이터 없이)
     """
@@ -160,7 +160,7 @@ def convert_basic_pdf_to_html(pdf_path: Path, html_path: Path, original_filename
         )
 
 
-def convert_csv_to_html(csv_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_csv_to_html(csv_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     CSV 파일을 HTML 테이블로 변환
     """
@@ -245,7 +245,7 @@ def convert_csv_to_html(csv_path: Path, html_path: Path, original_filename: str 
         )
 
 
-def convert_txt_to_html(txt_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_txt_to_html(txt_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     텍스트 파일을 HTML로 변환
     """
@@ -313,7 +313,7 @@ def convert_txt_to_html(txt_path: Path, html_path: Path, original_filename: str 
         )
 
 
-def convert_image_to_html(image_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_image_to_html(image_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     이미지 파일을 HTML로 변환 (EXIF 정보 포함)
     """
@@ -383,10 +383,10 @@ def convert_image_to_html(image_path: Path, html_path: Path, original_filename: 
     except Exception as e:
         logger.error(f"이미지 HTML 변환 실패: {str(e)}")
         # 실패 시 기본 구현 사용
-        return convert_basic_image_to_html(image_path, html_path, original_filename)
+        return view_basic_image_to_html(image_path, html_path, original_filename)
 
 
-def convert_basic_image_to_html(image_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_basic_image_to_html(image_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     기본 이미지 HTML 변환 (EXIF 없이)
     """
@@ -440,7 +440,7 @@ def convert_basic_image_to_html(image_path: Path, html_path: Path, original_file
         )
 
 
-def convert_md_to_html(md_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_md_to_html(md_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     마크다운 파일을 HTML로 변환
     """
@@ -513,13 +513,13 @@ def convert_md_to_html(md_path: Path, html_path: Path, original_filename: str = 
         
     except ImportError:
         logger.warning("markdown 라이브러리가 설치되지 않아 기본 구현을 사용합니다")
-        return convert_basic_md_to_html(md_path, html_path, original_filename)
+        return view_basic_md_to_html(md_path, html_path, original_filename)
     except Exception as e:
         logger.error(f"마크다운 HTML 변환 실패: {str(e)}")
-        return convert_basic_md_to_html(md_path, html_path, original_filename)
+        return view_basic_md_to_html(md_path, html_path, original_filename)
 
 
-def convert_basic_md_to_html(md_path: Path, html_path: Path, original_filename: str = None) -> Path:
+def view_basic_md_to_html(md_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     기본 마크다운 HTML 변환 (markdown 라이브러리 없이)
     """
@@ -591,168 +591,7 @@ def convert_basic_md_to_html(md_path: Path, html_path: Path, original_filename: 
         )
 
 
-def convert_with_libreoffice(input_path: Path, html_path: Path) -> Path:
-    """
-    LibreOffice를 사용하여 문서를 HTML로 변환
-    """
-    from .utils import find_soffice  # 순환 import 방지
-    
-    try:
-        # LibreOffice 실행 파일 찾기
-        libre_office = find_soffice()
-        if not libre_office:
-            raise HTTPException(
-                status_code=500,
-                detail="LibreOffice 실행 파일을 찾을 수 없습니다"
-            )
-        
-        # 출력 디렉토리 생성
-        output_dir = html_path.parent
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # LibreOffice 임시 프로필 디렉토리
-        LO_PROFILE_DIR = Path("/tmp/lo_profile")
-        LO_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-        lo_profile = LO_PROFILE_DIR.resolve()
-        
-        # LibreOffice HTML 변환 명령
-        cmd = [
-            str(libre_office),
-            "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault", "--nocrashreport",
-            f"-env:UserInstallation=file:///{lo_profile.as_posix()}",
-            "--convert-to", "html",
-            "--outdir", str(output_dir),
-            str(input_path)
-        ]
-        
-        logger.info(f"LibreOffice HTML 변환 명령: {' '.join(cmd)}")
-        
-        # subprocess로 LibreOffice 실행
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=60,  # 60초 타임아웃
-            cwd=str(input_path.parent)
-        )
-        
-        logger.info(f"LibreOffice 종료 코드: {result.returncode}")
-        if result.stdout:
-            logger.info(f"LibreOffice stdout: {result.stdout}")
-        if result.stderr:
-            logger.warning(f"LibreOffice stderr: {result.stderr}")
-        
-        if result.returncode != 0:
-            error_msg = f"LibreOffice HTML 변환 실패 (코드: {result.returncode})"
-            if result.stderr:
-                error_msg += f" - {result.stderr}"
-            raise HTTPException(status_code=500, detail=error_msg)
-        
-        # 생성된 HTML 파일 확인
-        expected_html = output_dir / f"{input_path.stem}.html"
-        
-        if not expected_html.exists():
-            # 생성된 HTML 파일들 확인
-            generated_files = list(output_dir.glob("*.html"))
-            logger.info(f"생성된 HTML 파일들: {generated_files}")
-            
-            if generated_files:
-                # 가장 최근에 생성된 파일 사용
-                expected_html = max(generated_files, key=os.path.getctime)
-                logger.info(f"생성된 HTML 파일 사용: {expected_html}")
-            else:
-                raise HTTPException(
-                    status_code=500,
-                    detail="HTML 파일 변환에 성공했으나 파일을 찾을 수 없습니다"
-                )
-        
-        # 원하는 경로로 파일 이동 (필요시)
-        if expected_html != html_path:
-            expected_html.rename(html_path)
-        
-        logger.info(f"LibreOffice HTML 변환 완료: {input_path} -> {html_path}")
-        return html_path
-        
-    except subprocess.TimeoutExpired:
-        logger.error("LibreOffice HTML 변환 시간 초과")
-        raise HTTPException(
-            status_code=500,
-            detail="파일 변환 시간이 초과되었습니다"
-        )
-    except Exception as e:
-        logger.error(f"LibreOffice HTML 변환 중 예상치 못한 오류: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"HTML 변환 중 오류 발생: {str(e)}"
-        )
-
-
-async def convert_with_libreoffice_async(input_path: Path, html_path: Path) -> Path:
-    """
-    LibreOffice를 사용한 비동기 변환
-    """
-    import asyncio
-    CONVERTED_DIR = html_path.parent
-    
-    # LibreOffice 실행 파일 찾기
-    from .utils import find_soffice  # 순환 import 방지
-    libre_office = find_soffice()
-    if not libre_office:
-        raise HTTPException(
-            status_code=500,
-            detail="LibreOffice 실행 파일을 찾을 수 없습니다"
-        )
-    LO_PROFILE_DIR = Path("/tmp/lo_profile")  # Linux/Windows 모두 문제 없음
-    LO_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-    lo_profile = LO_PROFILE_DIR.resolve()
-    logger.info(f"lo_profile 경로: {lo_profile}")    
-    # LibreOffice 변환 명령
-    cmd = [
-        str(libre_office),
-        "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault","--nocrashreport",
-        f"-env:UserInstallation=file:///{lo_profile.as_posix()}",
-        "--convert-to", "html",
-        "--outdir", str(CONVERTED_DIR),
-        str(input_path)
-    ]
-    
-    try:
-        # 플랫폼에 관계없이 안정적인 subprocess 실행을 위해 executor 사용
-        import subprocess
-        loop = asyncio.get_event_loop()
-        
-        def run_subprocess():
-            return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        result = await loop.run_in_executor(None, run_subprocess)
-        
-        if result.returncode != 0:
-            raise HTTPException(
-                status_code=500,
-                detail=f"LibreOffice 변환 실패: {result.stderr}"
-            )
-        
-        if not html_path.exists():
-            raise HTTPException(
-                status_code=500,
-                detail="변환된 HTML 파일을 찾을 수 없습니다"
-            )
-            
-        return html_path
-        
-    except subprocess.TimeoutExpired:
-        raise HTTPException(
-            status_code=500,
-            detail="문서 변환 시간이 초과되었습니다"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"문서 변환 중 오류 발생: {str(e)}"
-        )
-
-
-async def convert_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename: str = None) -> Path:
+async def view_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename: str = None) -> Path:
     """
     LibreOffice를 사용해 파일을 HTML로 변환 (비동기)
     특정 파일 타입은 전용 변환 함수 사용 (한글 인코딩 문제 해결)
@@ -775,23 +614,23 @@ async def convert_to_html(input_path: Path, CONVERTED_DIR: Path, original_filena
     # 파일 타입별 전용 변환 함수 사용 (이들은 동기이므로 executor 사용)
     if input_path.suffix.lower() == '.csv':
         return await asyncio.get_event_loop().run_in_executor(
-            None, convert_csv_to_html, input_path, html_path, original_filename
+            None, view_csv_to_html, input_path, html_path, original_filename
         )
     elif input_path.suffix.lower() == '.txt':
         return await asyncio.get_event_loop().run_in_executor(
-            None, convert_txt_to_html, input_path, html_path, original_filename
+            None, view_txt_to_html, input_path, html_path, original_filename
         )
     elif input_path.suffix.lower() in {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}:
         return await asyncio.get_event_loop().run_in_executor(
-            None, convert_image_to_html, input_path, html_path, original_filename
+            None, view_image_to_html, input_path, html_path, original_filename
         )
     elif input_path.suffix.lower() == '.md':
         return await asyncio.get_event_loop().run_in_executor(
-            None, convert_md_to_html, input_path, html_path, original_filename
+            None, view_md_to_html, input_path, html_path, original_filename
         )
     elif input_path.suffix.lower() == '.pdf':
         return await asyncio.get_event_loop().run_in_executor(
-            None, convert_pdf_to_html, input_path, html_path, original_filename
+            None, view_pdf_to_html, input_path, html_path, original_filename
         )
-    # 그 외 파일들은 LibreOffice 사용 (비동기)
-    return await convert_with_libreoffice_async(input_path, html_path)
+    else:
+        raise RuntimeError("지원하지 않는 파일 형식입니다")

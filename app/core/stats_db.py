@@ -116,6 +116,30 @@ class StatsDatabase:
             self._update_daily_stats(conn, datetime.now().date())
             
             return cursor.lastrowid
+
+    def log_error(self, 
+                  source_type: str,
+                  source_value: str, 
+                  error_message: str,
+                  file_name: str = None,
+                  file_type: str = None) -> int:
+        """에러 발생 로깅 (변환 실패 시 사용)"""
+        with self.get_connection() as conn:
+            cursor = conn.execute("""
+                INSERT INTO conversions (
+                    source_type, source_value, file_name, file_type,
+                    file_size, output_format, conversion_time, cache_hit,
+                    success, error_message
+                ) VALUES (?, ?, ?, ?, 0, 'error', 0, 0, 0, ?)
+            """, (
+                source_type, source_value, file_name, file_type, error_message
+            ))
+            
+            # 일별 통계 업데이트 (에러 카운트 포함)
+            self._update_daily_stats(conn, datetime.now().date())
+            
+            logger.error(f"변환 에러 로깅: {source_type}={source_value}, 에러={error_message}")
+            return cursor.lastrowid
     
     def _update_daily_stats(self, conn, date):
         """일별 통계 업데이트 (내부 함수)"""
@@ -296,7 +320,3 @@ class StatsDatabase:
             
             logger.info(f"오래된 데이터 {deleted}건 삭제 완료")
             return deleted
-
-
-
-
