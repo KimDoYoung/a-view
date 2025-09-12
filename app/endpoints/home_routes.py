@@ -22,8 +22,10 @@ from typing import Optional
 from pathlib import Path
 
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat, ViewParams
-from app.core.utils import check_libreoffice, local_file_copy_and_convert, url_download_and_convert
-from app.core.utils import get_redis, get_templates
+from app.core.utils import check_libreoffice, get_redis, get_templates
+from app.core.convert_lib import (
+    url_download_and_convert, local_file_copy_and_convert
+)
 from app.core.logger import get_logger
 from app.core.config import settings
 

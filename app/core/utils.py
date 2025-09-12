@@ -185,61 +185,7 @@ async def download_and_cache_file(redis_client: redis.Redis, url: str,  settings
     
     return cache_file_path, filename, False
 
-async def copy_and_cache_file(path: str, redis_client: redis.Redis, settings: Config) -> Tuple[Path, str, bool]:
-    """
-    로컬 파일을 캐시에 복사, 이미 캐쉬에 있으면 재사용
-    Returns: (파일 경로, 원본 파일명)
-    """
-    CACHE_DIR = Path(settings.CACHE_DIR)
-    input_path = Path(path)
-    
-    if not input_path.exists() or not input_path.is_file():
-        raise HTTPException(status_code=400, detail="지정된 경로에 파일이 존재하지 않습니다")
-    
-    filename = input_path.name
-    file_ext = validate_file_extension(filename)
-    
-    # 캐시 키 생성 (파일 경로 기반)
-    cache_key = generate_cache_key(str(input_path.resolve()))
-    
-    # Redis에서 캐시된 파일 정보 확인
-    cached_info = redis_client.hgetall(cache_key)
-    
-    if cached_info:
-        cached_path = Path(cached_info.get('path', ''))
-        if cached_path.exists():
-            return cached_path, cached_info.get('filename', 'unknown'), True
 
-    # 캐시 파일 저장 (비동기)
-    url_hash = hashlib.md5(str(input_path.resolve()).encode()).hexdigest()
-    cache_file_path = CACHE_DIR / f"{url_hash}{file_ext}"
-    
-    # aiofiles를 사용한 비동기 파일 복사 (사용 가능한 경우)
-    if AIOFILES_AVAILABLE:
-        async with aiofiles.open(input_path, 'rb') as src:
-            content = await src.read()
-        async with aiofiles.open(cache_file_path, 'wb') as dst:
-            await dst.write(content)
-        
-        # 파일 메타데이터 복사 (권한, 시간 등)
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, shutil.copystat, input_path, cache_file_path)
-    else:
-        # aiofiles가 없으면 executor 사용
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, shutil.copy2, input_path, cache_file_path)
-    
-    # Redis에 캐시 정보 저장 (24시간 TTL)
-    redis_client.hset(cache_key, mapping={
-        'path': str(cache_file_path),
-        'filename': filename,
-        'url': str(input_path.resolve()),
-        'size': cache_file_path.stat().st_size,
-        'ext': file_ext
-    })
-    redis_client.expire(cache_key, 86400)  # 24시간
-
-    return cache_file_path, filename, False
 
 async def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
     """
@@ -356,47 +302,6 @@ async def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
             detail=f"문서 변환 중 오류 발생: {str(e)}"
         )
 
-async def convert_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename: str = None) -> Path:
-    """
-    LibreOffice를 사용해 파일을 HTML로 변환 (비동기)
-    특정 파일 타입은 전용 변환 함수 사용 (한글 인코딩 문제 해결)
-    Returns: 변환된 HTML 파일 경로
-    """
-    # 이미 HTML인 경우 그대로 반환
-    if input_path.suffix.lower() in {'.html', '.htm'}:
-        return input_path
-    
-    # 변환된 파일 경로
-    html_filename = f"{input_path.stem}.html"
-    html_path = CONVERTED_DIR / html_filename
-    
-    # 이미 변환된 파일이 있으면 반환
-    if html_path.exists():
-        return html_path
-    
-    # 파일 타입별 전용 변환 함수 사용 (이들은 동기이므로 executor 사용)
-    if input_path.suffix.lower() == '.csv':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, convert_csv_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() == '.txt':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, convert_txt_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() in {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}:
-        return await asyncio.get_event_loop().run_in_executor(
-            None, convert_image_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() == '.md':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, convert_md_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() == '.pdf':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, convert_pdf_to_html, input_path, html_path, original_filename
-        )
-    # 그 외 파일들은 LibreOffice 사용 (비동기)
-    return await convert_with_libreoffice_async(input_path, html_path)
 
 def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str = None)->Path:
     '''
@@ -1072,67 +977,7 @@ def convert_with_libreoffice(input_path: Path, html_path: Path) -> Path:
         )
 
 
-async def convert_with_libreoffice_async(input_path: Path, html_path: Path) -> Path:
-    """
-    LibreOffice를 사용한 비동기 변환
-    """
-    CONVERTED_DIR = html_path.parent
-    
-    # LibreOffice 실행 파일 찾기
-    libre_office = find_soffice()
-    if not libre_office:
-        raise HTTPException(
-            status_code=500,
-            detail="LibreOffice 실행 파일을 찾을 수 없습니다"
-        )
-    LO_PROFILE_DIR = Path("/tmp/lo_profile")  # Linux/Windows 모두 문제 없음
-    LO_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-    lo_profile = LO_PROFILE_DIR.resolve()
-    logger.info(f"lo_profile 경로: {lo_profile}")    
-    # LibreOffice 변환 명령
-    cmd = [
-        str(libre_office),
-        "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault","--nocrashreport",
-        f"-env:UserInstallation=file:///{lo_profile.as_posix()}",
-        "--convert-to", "html",
-        "--outdir", str(CONVERTED_DIR),
-        str(input_path)
-    ]
-    
-    try:
-        # 플랫폼에 관계없이 안정적인 subprocess 실행을 위해 executor 사용
-        import subprocess
-        loop = asyncio.get_event_loop()
-        
-        def run_subprocess():
-            return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        result = await loop.run_in_executor(None, run_subprocess)
-        
-        if result.returncode != 0:
-            raise HTTPException(
-                status_code=500,
-                detail=f"LibreOffice 변환 실패: {result.stderr}"
-            )
-        
-        if not html_path.exists():
-            raise HTTPException(
-                status_code=500,
-                detail="변환된 HTML 파일을 찾을 수 없습니다"
-            )
-            
-        return html_path
-        
-    except subprocess.TimeoutExpired:
-        raise HTTPException(
-            status_code=500,
-            detail="문서 변환 시간이 초과되었습니다"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"문서 변환 중 오류 발생: {str(e)}"
-        )
+
 
 
 def cleanup_old_cache_files(max_age_hours: int = 24):
@@ -1151,89 +996,3 @@ def cleanup_old_cache_files(max_age_hours: int = 24):
                 except Exception:
                     pass  # 파일 삭제 실패 시 무시
 
-async def get_cached_pdf(redis_client: redis.Redis, url: str,  settings: Config) -> Tuple[Path, str]:
-    """
-    URL에서 파일을 다운로드하고 PDF로 변환하여 반환
-    Returns: (PDF 파일 경로, 원본 파일명)
-    """
-    # 파일 다운로드 및 캐시
-    file_path, original_filename = await download_and_cache_file(redis_client, url, settings)
-    
-    # PDF로 변환 (비동기)
-    converted_dir = Path(settings.CONVERTED_DIR)
-    pdf_path = await convert_to_pdf(file_path, converted_dir)
-    
-    return pdf_path, original_filename
-
-async def url_download_and_convert(request, url: str, output_format: str) -> str:
-    """
-    URL에서 파일을 다운로드하고 지정된 형식으로 변환 (비동기)
-    Returns: 변환된 파일의 URL (임시로 생성된 URL)
-    """
-    redis_client = request.app.state.redis
-    stats_manager = request.app.state.stats_db
-    start_time = time.time()
-
-    converted_dir = Path(settings.CONVERTED_DIR)
-    if output_format.lower().endswith('pdf'):
-        file_path, original_filename, cache_hit = await download_and_cache_file(redis_client, url, settings)
-        output_path = await convert_to_pdf(file_path, converted_dir)
-
-    elif output_format.lower().endswith('html'):
-        file_path, original_filename, cache_hit = await download_and_cache_file(redis_client, url, settings)
-        output_path = await convert_to_html(file_path, converted_dir, original_filename)
-    
-    logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
-    logger.info(f"변환된 파일 URL: {url}")
-    end_time = time.time()
-    conversion_time = end_time - start_time 
-    # 통계 DB에 기록
-    stats_manager.log_conversion(
-        source_type="url",
-        source_value=url,
-        file_name=output_path.name,
-        file_type=output_path.suffix[1:],
-        file_size=output_path.stat().st_size,
-        output_format=output_format,
-        conversion_time=conversion_time,
-        cache_hit=cache_hit
-    )
-    return url
-
-
-async def local_file_copy_and_convert(request, path: str, output_format: str) -> str:
-    """
-    로컬 파일을 지정된 형식으로 변환 (비동기)
-    Returns: 변환된 파일의 URL (임시로 생성된 URL)
-    """
-    redis_client = request.app.state.redis
-    stats_manager = request.app.state.stats_db
-    start_time = time.time()
-
-    converted_dir = Path(settings.CONVERTED_DIR)
-    if output_format.lower().endswith('pdf'):
-        file_path, original_filename, cache_hit = await copy_and_cache_file(path, redis_client, settings)
-        output_path = await convert_to_pdf(file_path, converted_dir)
-
-    elif output_format.lower().endswith('html'):
-        file_path, original_filename, cache_hit = await copy_and_cache_file(path, redis_client, settings)
-        output_path = await convert_to_html(file_path, converted_dir, original_filename)
-
-    logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
-    logger.info(f"변환된 파일 URL: {url}")
-    # 통계 DB에 기록
-    end_time = time.time()
-    conversion_time = end_time - start_time
-    stats_manager.log_conversion(
-        source_type="path",
-        source_value=path,
-        file_name=output_path.name,
-        file_type=output_path.suffix[1:],
-        file_size=output_path.stat().st_size,
-        output_format=output_format,
-        conversion_time=conversion_time,
-        cache_hit=cache_hit
-    )   
-    return url
