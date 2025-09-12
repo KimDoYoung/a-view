@@ -5,39 +5,37 @@ from typing import Optional, Self
 from pathlib import Path
 import os
 
-from app.domain.file_ext_definition import CONVERTABLE_EXTENSION
+from app.domain.file_ext_definition import (
+    CONVERTABLE_EXTENSION, 
+    TEXT_BASE_EXTENSION, 
+    IMAGE_BASE_EXTENSION, 
+    OFFICE_BASE_EXTENSION,
+    DOCUMENT_BASE_EXTENSION
+)
 
 class OutputFormat(str, Enum):
     """지원하는 출력 형식"""
     PDF = "pdf"
     HTML = "html"
-    # 추후 LibreOffice 지원 형식 추가 예정
-    # DOCX = "docx"
-    # TXT = "txt"
-    # ODT = "odt"
 
-# View용 파일 확장자별 출력 포맷 매핑
-VIEW_FORMAT_MAPPING = {
-    # 오피스 파일들 -> PDF
-    '.xlsx': OutputFormat.PDF,
-    '.xls': OutputFormat.PDF,
-    '.docx': OutputFormat.PDF,
-    '.doc': OutputFormat.PDF,
-    '.pptx': OutputFormat.PDF,
-    '.ppt': OutputFormat.PDF,
-    
-    # 텍스트 기반 파일들 -> HTML
-    '.txt': OutputFormat.HTML,
-    '.csv': OutputFormat.HTML,
-    '.md': OutputFormat.HTML,
-    
-    # 이미지 파일들 -> HTML (이미지를 HTML로 감싸서 표시)
-    '.jpg': OutputFormat.HTML,
-    '.jpeg': OutputFormat.HTML,
-    '.png': OutputFormat.HTML,
-    '.gif': OutputFormat.HTML,
-    '.bmp': OutputFormat.HTML
-}
+# View용 파일 확장자별 출력 포맷 매핑 (동적 생성)
+VIEW_FORMAT_MAPPING = {}
+
+# 오피스 파일들 -> PDF
+for ext in OFFICE_BASE_EXTENSION:
+    VIEW_FORMAT_MAPPING[ext] = OutputFormat.PDF
+
+# 텍스트 기반 파일들 -> HTML  
+for ext in TEXT_BASE_EXTENSION:
+    VIEW_FORMAT_MAPPING[ext] = OutputFormat.HTML
+
+# CSV 파일 -> HTML (DOCUMENT_BASE_EXTENSION에서 CSV만 선별)
+for ext in DOCUMENT_BASE_EXTENSION:
+    VIEW_FORMAT_MAPPING[ext] = OutputFormat.HTML
+
+# 이미지 파일들 -> HTML (이미지를 HTML로 감싸서 표시)
+for ext in IMAGE_BASE_EXTENSION:
+    VIEW_FORMAT_MAPPING[ext] = OutputFormat.HTML
 
 class ConvertParams(BaseModel):
     """변환 요청 파라미터 모델 (Schema)"""
