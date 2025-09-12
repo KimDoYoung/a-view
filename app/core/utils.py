@@ -391,11 +391,136 @@ async def convert_to_html(input_path: Path, CONVERTED_DIR: Path, original_filena
         return await asyncio.get_event_loop().run_in_executor(
             None, convert_md_to_html, input_path, html_path, original_filename
         )
-    
+    elif input_path.suffix.lower() == '.pdf':
+        return await asyncio.get_event_loop().run_in_executor(
+            None, convert_pdf_to_html, input_path, html_path, original_filename
+        )
     # 그 외 파일들은 LibreOffice 사용 (비동기)
     return await convert_with_libreoffice_async(input_path, html_path)
 
+def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str = None)->Path:
+    '''
+    pdf를 html로 감싸서 보여준다. tempalte viewer/pdf_html
+    '''
+    """
+    PDF 파일을 HTML로 감싸서 브라우저에서 볼 수 있도록 함
+    브라우저의 내장 PDF 뷰어를 사용
+    Returns: 변환된 HTML 파일 경로
+    """
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        
+        # PDF 파일 정보 추출
+        file_size = pdf_path.stat().st_size
+        file_size_mb = file_size / (1024 * 1024)
+        
+        # PDF 파일의 상대 경로 생성 (정적 파일 서빙용)
+        pdf_filename = pdf_path.name
+        
+        # PDF 메타데이터 추출 시도 (선택적)
+        pdf_info = {}
+        try:
+            # PyPDF2나 pdfplumber가 있다면 사용
+            import PyPDF2
+            with open(pdf_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                pdf_info['pages'] = len(reader.pages)
+                if reader.metadata:
+                    pdf_info['title'] = reader.metadata.get('/Title', '')
+                    pdf_info['author'] = reader.metadata.get('/Author', '')
+                    pdf_info['subject'] = reader.metadata.get('/Subject', '')
+                    pdf_info['creator'] = reader.metadata.get('/Creator', '')
+        except ImportError:
+            logger.info("PyPDF2가 설치되지 않아 PDF 메타데이터를 추출할 수 없습니다")
+            pdf_info['pages'] = 'Unknown'
+        except Exception as e:
+            logger.warning(f"PDF 메타데이터 추출 실패: {e}")
+            pdf_info['pages'] = 'Unknown'
+        
+        # Jinja2 템플릿 로드
+        current_dir = Path(__file__).parent.parent  # app 디렉토리
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        
+        # 숫자 포매팅 필터 추가
+        def number_format(value):
+            return f"{value:,}"
+        env.filters['number_format'] = number_format
+        
+        template = env.get_template('viewer/pdf.html')
+        
+        # 템플릿 렌더링
+        display_filename = original_filename if original_filename else pdf_path.name
+        html_content = template.render(
+            filename=display_filename,
+            original_filename=display_filename,
+            pdf_path=str(pdf_path),  # 절대 경로
+            pdf_filename=pdf_filename,
+            file_size=file_size,
+            file_size_mb=round(file_size_mb, 2),
+            pdf_info=pdf_info
+        )
+        
+        # HTML 파일로 저장 (UTF-8 인코딩)
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"PDF를 HTML로 변환 완료: {pdf_path} -> {html_path}")
+        return html_path
+        
+    except Exception as e:
+        logger.error(f"PDF를 HTML로 변환 실패: {str(e)}")
+        # 실패 시 기본 구현 사용
+        return convert_basic_pdf_to_html(pdf_path, html_path, original_filename)
 
+def convert_basic_pdf_to_html(pdf_path: Path, html_path: Path, original_filename: str = None) -> Path:
+    """
+    기본 PDF HTML 변환 (메타데이터 없이)
+    """
+    try:
+        from jinja2 import Environment, FileSystemLoader
+        
+        # 기본 파일 정보
+        file_size = pdf_path.stat().st_size
+        file_size_mb = file_size / (1024 * 1024)
+        pdf_filename = pdf_path.name
+        
+        # Jinja2 템플릿 로드
+        current_dir = Path(__file__).parent.parent  # app 디렉토리
+        template_dir = current_dir / "templates"
+        env = Environment(loader=FileSystemLoader(str(template_dir)))
+        
+        def number_format(value):
+            return f"{value:,}"
+        env.filters['number_format'] = number_format
+        
+        template = env.get_template('viewer/pdf.html')
+        
+        # 템플릿 렌더링 (기본값들)
+        display_filename = original_filename if original_filename else pdf_path.name
+        html_content = template.render(
+            filename=display_filename,
+            original_filename=display_filename,
+            pdf_path=str(pdf_path),
+            pdf_filename=pdf_filename,
+            file_size=file_size,
+            file_size_mb=round(file_size_mb, 2),
+            pdf_info={'pages': 'Unknown'}
+        )
+        
+        # HTML 파일로 저장
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        logger.info(f"PDF를 기본 HTML로 변환 완료: {pdf_path} -> {html_path}")
+        return html_path
+        
+    except Exception as e:
+        logger.error(f"기본 PDF HTML 변환 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"PDF 변환 중 오류 발생: {str(e)}"
+        )
 def convert_csv_to_html(csv_path: Path, html_path: Path, original_filename: str = None) -> Path:
     """
     CSV 파일을 pandas를 사용해서 HTML로 변환 (한글 인코딩 문제 해결)
