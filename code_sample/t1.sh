@@ -19,7 +19,6 @@ curl "http://localhost:8003/view?path=c:/tmp/aview/files/33.pptx"
 echo "----------------------------------------------------"
 curl "http://localhost:8003/view?url=http://localhost:8003/aview/files/11.docx"
 
-
 end_time=$(date +%s)
 execution_time=$((end_time - start_time))
 echo "Conversion process completed."
