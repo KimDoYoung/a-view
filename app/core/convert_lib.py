@@ -33,7 +33,7 @@ async def convert_to_pdf(request: Request, input_path: Path) -> Path:
     """
     from app.core.utils import libreoffice_convert  # 순환 import 방지
     
-    CONVERTED_DIR = settings.CONVERTED_DIR
+    CONVERTED_DIR = Path(settings.CONVERTED_DIR)
     logger.info(f"PDF 변환 시작: {input_path}, 생성폴더: {CONVERTED_DIR}")
 
     # 이미 PDF인 경우 그대로 반환
@@ -122,7 +122,8 @@ async def download_and_cache_file(request: Request, url: str, settings: Config) 
     # Redis에서 캐시된 파일 확인
     cached_filename = redis_client.get(cache_key)
     if cached_filename:
-        cached_filename = cached_filename.decode('utf-8')
+        if isinstance(cached_filename, bytes):
+            cached_filename = cached_filename.decode('utf-8')
         file_ext = validate_file_extension(cached_filename)
         url_hash = hashlib.md5(url.encode()).hexdigest()
         cache_path = Path(settings.CACHE_DIR) / f"{url_hash}{file_ext}"
@@ -252,46 +253,6 @@ async def copy_and_cache_file(request: Request, path: str,  settings: Config) ->
     return cache_file_path, filename, False
 
 
-async def url_download_and_convert(request: Request, url: str, output_format: str) -> str:
-    """
-    URL에서 파일을 다운로드하고 지정된 형식으로 변환 (비동기)
-    Returns: 변환된 파일의 URL (임시로 생성된 URL)
-    """
-    import time
-    from app.core.view_lib import view_to_html  # 순환 import 방지
-    
-    # redis_client = request.app.state.redis
-    stats_manager = request.app.state.stats_db
-    start_time = time.time()
-
-    # converted_dir = Path(settings.CONVERTED_DIR)
-    if output_format.lower().endswith('pdf'):
-        file_path, original_filename, cache_hit = await download_and_cache_file(request, url, settings)
-        output_path = await convert_to_pdf(request, file_path)
-
-    elif output_format.lower().endswith('html'):
-        file_path, original_filename, cache_hit = await download_and_cache_file(request, url, settings)
-        output_path = await view_to_html(file_path, Path(settings.CONVERTED_DIR), original_filename)
-    
-    logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
-    logger.info(f"변환된 파일 URL: {url}")
-    end_time = time.time()
-    conversion_time = end_time - start_time 
-    # 통계 DB에 기록
-    stats_manager.log_conversion(
-        source_type="url",
-        source_value=url,
-        file_name=output_path.name,
-        file_type=output_path.suffix[1:],
-        file_size=output_path.stat().st_size,
-        output_format=output_format,
-        conversion_time=conversion_time,
-        cache_hit=cache_hit
-    )
-    return url
-
-
 async def convert_to_html_with_libreoffice(request: Request, input_path: Path) -> Path:
     """
     LibreOffice를 사용해 파일을 HTML로 변환 (비동기)
@@ -377,17 +338,17 @@ async def local_file_copy_and_convert(request: Request, path: str, output_format
     """
     import time
     
-    redis_client = request.app.state.redis
+    # redis_client = request.app.state.redis
     stats_manager = request.app.state.stats_db
     start_time = time.time()
 
-    converted_dir = Path(settings.CONVERTED_DIR)
+    # converted_dir = Path(settings.CONVERTED_DIR)
     if output_format.lower().endswith('pdf'):
-        file_path, original_filename, cache_hit = await copy_and_cache_file(path, redis_client, settings)
+        file_path, original_filename, cache_hit = await copy_and_cache_file(request, path,  settings)
         output_path = await convert_to_pdf(request, file_path)
 
     elif output_format.lower().endswith('html'):
-        file_path, original_filename, cache_hit = await copy_and_cache_file(path, redis_client, settings)
+        file_path, original_filename, cache_hit = await copy_and_cache_file(request, path, settings)
         output_path = await convert_to_html_with_libreoffice(request, file_path)
 
     logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
@@ -407,3 +368,43 @@ async def local_file_copy_and_convert(request: Request, path: str, output_format
         cache_hit=cache_hit
     )   
     return url
+
+async def url_download_and_convert(request: Request, url: str, output_format: str) -> str:
+    """
+    URL에서 파일을 다운로드하고 지정된 형식으로 변환 (비동기)
+    Returns: 변환된 파일의 URL (임시로 생성된 URL)
+    """
+    import time
+    from app.core.view_lib import view_to_html  # 순환 import 방지
+    
+    # redis_client = request.app.state.redis
+    stats_manager = request.app.state.stats_db
+    start_time = time.time()
+
+    # converted_dir = Path(settings.CONVERTED_DIR)
+    if output_format.lower().endswith('pdf'):
+        file_path, original_filename, cache_hit = await download_and_cache_file(request, url, settings)
+        output_path = await convert_to_pdf(request, file_path)
+
+    elif output_format.lower().endswith('html'):
+        file_path, original_filename, cache_hit = await download_and_cache_file(request, url, settings)
+        output_path = await convert_to_html_with_libreoffice(request, file_path)
+    
+    logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
+    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    logger.info(f"변환된 파일 URL: {url}")
+    end_time = time.time()
+    conversion_time = end_time - start_time 
+    # 통계 DB에 기록
+    stats_manager.log_conversion(
+        source_type="url",
+        source_value=url,
+        file_name=output_path.name,
+        file_type=output_path.suffix[1:],
+        file_size=output_path.stat().st_size,
+        output_format=output_format,
+        conversion_time=conversion_time,
+        cache_hit=cache_hit
+    )
+    return url
+
