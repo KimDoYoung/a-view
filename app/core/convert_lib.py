@@ -2,7 +2,7 @@
 Convert Library
 PDF 변환 관련 기능들을 모아놓은 라이브러리
 """
-
+import time
 import asyncio
 import hashlib
 import shutil
@@ -336,8 +336,7 @@ async def local_file_copy_and_convert(request: Request, path: str, output_format
     로컬 파일을 지정된 형식으로 변환 (비동기)
     Returns: 변환된 파일의 URL (임시로 생성된 URL)
     """
-    import time
-    
+   
     # redis_client = request.app.state.redis
     stats_manager = request.app.state.stats_db
     start_time = time.time()
@@ -374,14 +373,9 @@ async def url_download_and_convert(request: Request, url: str, output_format: st
     URL에서 파일을 다운로드하고 지정된 형식으로 변환 (비동기)
     Returns: 변환된 파일의 URL (임시로 생성된 URL)
     """
-    import time
-    from app.core.view_lib import view_to_html  # 순환 import 방지
-    
-    # redis_client = request.app.state.redis
     stats_manager = request.app.state.stats_db
     start_time = time.time()
 
-    # converted_dir = Path(settings.CONVERTED_DIR)
     if output_format.lower().endswith('pdf'):
         file_path, original_filename, cache_hit = await download_and_cache_file(request, url, settings)
         output_path = await convert_to_pdf(request, file_path)
