@@ -7,14 +7,17 @@ View Library
 import csv
 from io import StringIO
 from pathlib import Path
+import time
 from typing import Tuple
 
 import redis
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from jinja2 import Environment, FileSystemLoader
 
-from app.core.config import Config
+from app.core.config import Config, settings
 from app.core.logger import get_logger
+from app.core.utils import copy_and_cache_file, download_and_cache_file
+from doc.utils import convert_to_html
 
 logger = get_logger(__name__)
 
@@ -634,3 +637,64 @@ async def view_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename:
         )
     else:
         raise RuntimeError("지원하지 않는 파일 형식입니다")
+
+
+async def local_file_copy_and_view(request: Request, path: str, output_format: str) -> str:
+    """
+    로컬 파일을 지정된 형식으로 변환 (비동기)
+    Returns: 변환된 파일의 URL (임시로 생성된 URL)
+    """
+
+    stats_manager = request.app.state.stats_db
+    start_time = time.time()
+
+    file_path, original_filename, cache_hit = await copy_and_cache_file(request, path, settings)
+    output_path = await convert_to_html(request, file_path)
+
+    logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
+    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    logger.info(f"변환된 파일 URL: {url}")
+    # 통계 DB에 기록
+    end_time = time.time()
+    conversion_time = end_time - start_time
+    stats_manager.log_conversion(
+        source_type="path",
+        source_value=path,
+        file_name=output_path.name,
+        file_type=output_path.suffix[1:],
+        file_size=output_path.stat().st_size,
+        output_format=output_format,
+        conversion_time=conversion_time,
+        cache_hit=cache_hit
+    )   
+    return url
+
+async def url_download_and_view(request: Request, url: str, output_format: str) -> str:
+    """
+    URL에서 파일을 다운로드하고 지정된 형식으로 변환 (비동기)
+    Returns: 변환된 파일의 URL (임시로 생성된 URL)
+    """
+    stats_manager = request.app.state.stats_db
+    start_time = time.time()
+
+    file_path, original_filename, cache_hit = await download_and_cache_file(request, url, settings)
+    output_path = await convert_to_html(request, file_path)
+    
+    logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
+    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    logger.info(f"변환된 파일 URL: {url}")
+    end_time = time.time()
+    conversion_time = end_time - start_time 
+    # 통계 DB에 기록
+    stats_manager.log_conversion(
+        source_type="url",
+        source_value=url,
+        file_name=output_path.name,
+        file_type=output_path.suffix[1:],
+        file_size=output_path.stat().st_size,
+        output_format=output_format,
+        conversion_time=conversion_time,
+        cache_hit=cache_hit
+    )
+    return url
+

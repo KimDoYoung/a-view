@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from typing import Optional
 from pathlib import Path
 
+from app.core.view_lib import local_file_copy_and_view, url_download_and_view
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat, ViewParams
 from app.core.utils import check_libreoffice, get_redis, get_templates
 from app.core.convert_lib import (
@@ -176,7 +177,7 @@ async def view_document(
         
         if params.is_url_source:
             logger.info(f"URL에서 다운로드 및 변환: {params.url} -> {auto_output.value}")
-            converted_url = await url_download_and_convert(request, params.url, auto_output)
+            converted_url = await url_download_and_view(request, params.url, auto_output)
             
             # URL에서 원본 파일명 추출
             from urllib.parse import urlparse
@@ -198,7 +199,7 @@ async def view_document(
             return templates.TemplateResponse(template_name, context)
         else:
             logger.info(f"path 파일 변환: {params.path} -> {auto_output.value}")
-            converted_url = await local_file_copy_and_convert(request, params.path, auto_output)
+            converted_url = await local_file_copy_and_view(request, params.path, auto_output)
             
             # 로컬 파일에서 원본 파일명 추출
             original_filename = Path(params.path).name

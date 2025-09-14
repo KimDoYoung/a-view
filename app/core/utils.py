@@ -11,16 +11,24 @@ from pathlib import Path
 from typing import Optional, Tuple
 from urllib.parse import urlparse, unquote
 
+import aiofiles
+import aiohttp
 import httpx
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
-from app.core.config import settings
+from app.core.config import Config, settings
 from app.core.logger import get_logger
 from app.domain.file_ext_definition import (
     SUPPORTED_EXTENSIONS
 )
 
 logger = get_logger(__name__)
+
+try:
+    import aiofiles
+    AIOFILES_AVAILABLE = True
+except ImportError:
+    AIOFILES_AVAILABLE = False
 
 def get_redis(request):
     return getattr(request.app.state, "redis", None)
@@ -226,3 +234,157 @@ def cleanup_old_cache_files(max_age_hours: int = 24):
                     cache_file.unlink()
                 except Exception:
                     pass  # 파일 삭제 실패 시 무시
+
+
+async def download_and_cache_file(request: Request, url: str, settings: Config) -> Tuple[Path, str, bool]:
+    """
+    URL로 키를 만들어서 캐쉬에 있는지 체크 있으면 캐쉬를 없으면 URL에서 파일을 다운로드하고 캐시에 저장
+    Returns: (파일 경로, 원본 파일명, cache_hit)
+    """
+    from app.core.utils import generate_cache_key, validate_file_extension  # 순환 import 방지
+    redis_client = request.app.state.redis
+    stats_manager = request.app.state.stats_db
+
+    # URL에서 파일명 추출
+    try:
+        parsed_url = url.split('/')[-1].split('?')[0]  # 간단한 파일명 추출
+        if not parsed_url:
+            parsed_url = "downloaded_file"
+    except:
+        parsed_url = "downloaded_file"
+    
+    # 캐시 키 생성
+    cache_key = generate_cache_key(url)
+    
+    # Redis에서 캐시된 파일 확인
+    cached_filename = redis_client.get(cache_key)
+    if cached_filename:
+        if isinstance(cached_filename, bytes):
+            cached_filename = cached_filename.decode('utf-8')
+        file_ext = validate_file_extension(cached_filename)
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        cache_path = Path(settings.CACHE_DIR) / f"{url_hash}{file_ext}"
+        
+        if cache_path.exists():
+            logger.info(f"캐시에서 파일 사용: {cache_path}")
+            return cache_path, cached_filename, True
+    
+    # 파일 다운로드
+    try:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"파일 다운로드 실패: HTTP {response.status}"
+                    )
+                
+                # Content-Disposition에서 파일명 추출 시도
+                original_filename = parsed_url
+                content_disposition = response.headers.get('content-disposition')
+                if content_disposition:
+                    import re
+                    filename_match = re.search(r'filename[*]?=([^;]+)', content_disposition)
+                    if filename_match:
+                        original_filename = filename_match.group(1).strip('"\'')
+                
+                # 파일 확장자 검증
+                file_ext = validate_file_extension(original_filename)
+                
+                # 캐시 파일 경로 생성
+                url_hash = hashlib.md5(url.encode()).hexdigest()
+                cache_path = Path(settings.CACHE_DIR) / f"{url_hash}{file_ext}"
+                
+                # 캐시 디렉토리 생성
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # 파일 다운로드 및 저장
+                async with aiofiles.open(cache_path, 'wb') as f:
+                    async for chunk in response.content.iter_chunked(8192):
+                        await f.write(chunk)
+                
+                # Redis에 파일명 캐시 (24시간)
+                redis_client.setex(cache_key, 86400, original_filename)
+                
+                logger.info(f"파일 다운로드 완료: {cache_path}")
+                return cache_path, original_filename, False
+                
+    except aiohttp.ClientError as e:
+        logger.error(f"파일 다운로드 중 네트워크 오류-HTTP 클라이언트 오류: {str(e)}")
+        stats_manager.log_error(
+            'url', url, f'파일 다운로드 중 네트워크 오류-HTTP 클라이언트 오류: {str(e)}'
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"파일 다운로드 중 네트워크 오류: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"파일 다운로드 중 예상치 못한 오류: {str(e)}")
+        stats_manager.log_error(
+            'url', url, f'파일 다운로드 중 예상치 못한 오류: {str(e)}'
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"파일 다운로드 중 오류: {str(e)}"
+        )
+
+
+async def copy_and_cache_file(request: Request, path: str,  settings: Config) -> Tuple[Path, str, bool]:
+    """
+    로컬 파일을 캐시에 복사, 이미 캐쉬에 있으면 재사용
+    Returns: (파일 경로, 원본 파일명, cache_hit)
+    """
+    from app.core.utils import generate_cache_key, validate_file_extension  # 순환 import 방지
+    redis_client = request.app.state.redis
+
+    CACHE_DIR = Path(settings.CACHE_DIR)
+    input_path = Path(path)
+    
+    if not input_path.exists() or not input_path.is_file():
+        raise HTTPException(status_code=400, detail="지정된 경로에 파일이 존재하지 않습니다")
+    
+    filename = input_path.name
+    file_ext = validate_file_extension(filename)
+    
+    # 캐시 키 생성 (파일 경로 기반)
+    cache_key = generate_cache_key(str(input_path.resolve()))
+    
+    # Redis에서 캐시된 파일 정보 확인
+    cached_info = redis_client.hgetall(cache_key)
+    
+    if cached_info:
+        cached_path = Path(cached_info.get('path', ''))
+        if cached_path.exists():
+            return cached_path, cached_info.get('filename', 'unknown'), True
+
+    # 캐시 파일 저장 (비동기)
+    url_hash = hashlib.md5(str(input_path.resolve()).encode()).hexdigest()
+    cache_file_path = CACHE_DIR / f"{url_hash}{file_ext}"
+    
+    # aiofiles를 사용한 비동기 파일 복사 (사용 가능한 경우)
+    if AIOFILES_AVAILABLE:
+        async with aiofiles.open(input_path, 'rb') as src:
+            content = await src.read()
+        async with aiofiles.open(cache_file_path, 'wb') as dst:
+            await dst.write(content)
+        
+        # 파일 메타데이터 복사 (권한, 시간 등)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, shutil.copystat, input_path, cache_file_path)
+    else:
+        # aiofiles가 없으면 executor 사용
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, shutil.copy2, input_path, cache_file_path)
+    
+    # Redis에 캐시 정보 저장 (24시간 TTL)
+    redis_client.hset(cache_key, mapping={
+        'path': str(cache_file_path),
+        'filename': filename,
+        'url': str(input_path.resolve()),
+        'size': cache_file_path.stat().st_size,
+        'ext': file_ext
+    })
+    redis_client.expire(cache_key, 86400)  # 24시간
+
+    return cache_file_path, filename, False
