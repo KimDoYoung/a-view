@@ -397,8 +397,12 @@ async def convert_to_html(request: Request, input_file_path: str, original_filen
         return await asyncio.get_event_loop().run_in_executor(
             None, convert_pdf_to_html, input_path, html_path, original_filename
         )
-    # 그 외 파일들은 LibreOffice 사용 (비동기)
-    return await convert_with_libreoffice_async(input_path, html_path)
+    # 오피스 문서를 view하는 경우임
+    # HTML 경로의 확장자를 PDF로 변경
+    pdf_path = html_path.with_suffix('.pdf')
+    converted_path =  await convert_with_libreoffice_async(input_path, pdf_path)
+    logger.info(f"오피스문서 Libre로 변환된 pdf: {converted_path}")
+    return converted_path
 
 def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str = None)->Path:
     '''
@@ -1088,7 +1092,7 @@ async def convert_with_libreoffice_async(input_path: Path, html_path: Path) -> P
         str(libre_office),
         "--headless", "--nologo", "--norestore", "--nolockcheck", "--nodefault","--nocrashreport",
         f"-env:UserInstallation=file:///{lo_profile.as_posix()}",
-        "--convert-to", "html",
+        "--convert-to", "pdf",
         "--outdir", str(CONVERTED_DIR),
         str(input_path)
     ]
