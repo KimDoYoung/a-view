@@ -462,7 +462,6 @@ def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str =
             file_size_mb=round(file_size_mb, 2),
             pdf_info=pdf_info
         )
-        logger.debug
         # HTML 파일로 저장 (UTF-8 인코딩)
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)

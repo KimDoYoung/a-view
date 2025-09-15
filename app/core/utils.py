@@ -246,9 +246,10 @@ async def download_and_cache_file(request: Request, url: str, settings: Config) 
     redis_client = request.app.state.redis
     stats_manager = request.app.state.stats_db
 
-    # URL에서 파일명 추출
+    # URL에서 파일명 추출 (URL 디코딩 적용)
     try:
-        parsed_url = url.split('/')[-1].split('?')[0]  # 간단한 파일명 추출
+        raw_filename = url.split('/')[-1].split('?')[0]  # 간단한 파일명 추출
+        parsed_url = unquote(raw_filename) if raw_filename else "downloaded_file"  # URL 디코딩
         if not parsed_url:
             parsed_url = "downloaded_file"
     except:
