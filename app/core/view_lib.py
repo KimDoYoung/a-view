@@ -649,7 +649,7 @@ async def local_file_copy_and_view(request: Request, path: str, output_format: s
     start_time = time.time()
 
     file_path, original_filename, cache_hit = await copy_and_cache_file(request, path, settings)
-    output_path = await convert_to_html(request, file_path)
+    output_path = await convert_to_html(request, file_path, original_filename)
 
     logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
     url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
@@ -678,7 +678,7 @@ async def url_download_and_view(request: Request, url: str, output_format: str) 
     start_time = time.time()
 
     file_path, original_filename, cache_hit = await download_and_cache_file(request, url, settings)
-    output_path = await convert_to_html(request, file_path)
+    output_path = await convert_to_html(request, file_path, original_filename)
     
     logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
     url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"

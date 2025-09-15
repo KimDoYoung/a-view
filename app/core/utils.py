@@ -3,6 +3,7 @@ A-View 유틸리티 함수들
 - 간단한 헬퍼 함수들만 포함
 - 복잡한 변환 로직은 convert_lib, view_lib 참조
 """
+import asyncio
 import hashlib
 import os
 import shutil

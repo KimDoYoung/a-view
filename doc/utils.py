@@ -16,7 +16,7 @@ from urllib.parse import urlparse, unquote
 
 import httpx
 import redis
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 try:
     import aiofiles
@@ -356,16 +356,18 @@ async def convert_to_pdf(input_path: Path, CONVERTED_DIR: Path) -> Path:
             detail=f"문서 변환 중 오류 발생: {str(e)}"
         )
 
-async def convert_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename: str = None) -> Path:
+async def convert_to_html(request: Request, input_file_path: str, original_filename: str = None) -> Path:
     """
     LibreOffice를 사용해 파일을 HTML로 변환 (비동기)
     특정 파일 타입은 전용 변환 함수 사용 (한글 인코딩 문제 해결)
     Returns: 변환된 HTML 파일 경로
     """
+    input_path = Path(input_file_path)
     # 이미 HTML인 경우 그대로 반환
     if input_path.suffix.lower() in {'.html', '.htm'}:
         return input_path
     
+    CONVERTED_DIR = Path(settings.CONVERTED_DIR)
     # 변환된 파일 경로
     html_filename = f"{input_path.stem}.html"
     html_path = CONVERTED_DIR / html_filename
@@ -439,8 +441,7 @@ def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str =
             pdf_info['pages'] = 'Unknown'
         
         # Jinja2 템플릿 로드
-        current_dir = Path(__file__).parent.parent  # app 디렉토리
-        template_dir = current_dir / "templates"
+        template_dir = settings.TEMPLATE_DIR
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         
         # 숫자 포매팅 필터 추가
@@ -490,8 +491,7 @@ def convert_basic_pdf_to_html(pdf_path: Path, html_path: Path, original_filename
         pdf_url = f"/pdf/{pdf_filename}"
         
         # Jinja2 템플릿 로드
-        current_dir = Path(__file__).parent.parent  # app 디렉토리
-        template_dir = current_dir / "templates"
+        template_dir = settings.TEMPLATE_DIR
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         
         def number_format(value):
@@ -562,9 +562,8 @@ def convert_csv_to_html(csv_path: Path, html_path: Path, original_filename: str 
         
         # Jinja2 템플릿 로드
         import os
-        # 현재 파일의 디렉토리에서 templates 폴더 찾기
-        current_dir = Path(__file__).parent.parent  # app 디렉토리
-        template_dir = current_dir / "templates"
+        # Jinja2 템플릿 로드
+        template_dir = settings.TEMPLATE_DIR
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         template = env.get_template('viewer/csv.html')
         
@@ -642,9 +641,8 @@ def convert_txt_to_html(txt_path: Path, html_path: Path, original_filename: str 
         
         # Jinja2 템플릿 로드
         import os
-        # 현재 파일의 디렉토리에서 templates 폴더 찾기
-        current_dir = Path(__file__).parent.parent  # app 디렉토리
-        template_dir = current_dir / "templates"
+        # Jinja2 템플릿 로드
+        template_dir = settings.TEMPLATE_DIR
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         
         # 숫자 포매팅 필터 추가
@@ -688,7 +686,6 @@ def convert_image_to_html(image_path: Path, html_path: Path, original_filename: 
     try:
         from jinja2 import Environment, FileSystemLoader
         from PIL import Image
-        import os
         
         # 이미지 정보 추출
         try:
@@ -727,8 +724,7 @@ def convert_image_to_html(image_path: Path, html_path: Path, original_filename: 
         image_filename = image_path.name
         
         # Jinja2 템플릿 로드
-        current_dir = Path(__file__).parent.parent  # app 디렉토리
-        template_dir = current_dir / "templates"
+        template_dir = settings.TEMPLATE_DIR
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         template = env.get_template('viewer/image.html')
         
@@ -903,8 +899,7 @@ def convert_md_to_html(md_path: Path, html_path: Path, original_filename: str = 
         syntax_css = formatter.get_style_defs('.highlight')
         
         # Jinja2 템플릿 로드
-        current_dir = Path(__file__).parent.parent  # app/core -> app
-        template_dir = current_dir / "templates"
+        template_dir = settings.TEMPLATE_DIR
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         
         # 숫자 포매팅 필터 추가

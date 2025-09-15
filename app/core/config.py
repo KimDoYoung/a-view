@@ -44,6 +44,10 @@ class Config:
         # 통계 DB
         self.STATS_DB_PATH = os.getenv('STATS_DB_PATH', f'{self.BASE_DIR}/db/aview_stats.db') 
         
+        # 템플릿 디렉토리 설정
+        from pathlib import Path
+        self.TEMPLATE_DIR = Path(__file__).parent.parent / "templates" 
+        
         # LibreOffice 설정
         self.LIBREOFFICE_TIMEOUT = int(os.getenv('LIBREOFFICE_TIMEOUT', '60'))
         self.LIBREOFFICE_PATH = os.getenv('LIBREOFFICE_PATH', None)

@@ -1,34 +1,35 @@
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-file-alt me-2"></i>A-View({{version}}) : {{ title }}
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    {% if title != "홈" and title != "대시보드" %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">홈</a>
-                    </li>
-                    {% endif %}
-                    {% if "테스트" not in title %}    
-                    <li class="nav-item"></li>
-                        <a class="nav-link" href="/aview/run-test">API 테스트</a>
-                    </li>
-                    {% endif %}
-                    {% if title != "로그 뷰어" %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="/aview/log-view">로그 뷰어</a>
-                    </li>
-                    {% endif %}
-                    {% if title != "소개" and title != "A-View 소개" %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="/about">소개</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <i class="fas fa-file-alt me-2"></i>A-View({{version}}) : {{ title }}
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+      aria-controls="navbarNav"
+      aria-expanded="false"
+      aria-label="네비게이션 메뉴 토글"
+      title="네비게이션 메뉴 토글"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">{% if title != "홈" and title != "대시보드" %}
+        <li class="nav-item">
+          <a class="nav-link" href="/">홈</a>
+        </li>{% endif %}{% if "테스트" not in title %}
+        <li class="nav-item">
+          <a class="nav-link" href="/aview/run-test">API 테스트</a>
+        </li>{% endif %}{% if title != "로그 뷰어" %}
+        <li class="nav-item">
+          <a class="nav-link" href="/aview/log-view">로그 뷰어</a>
+        </li>{% endif %}{% if title != "소개" and title != "A-View 소개" %}
+        <li class="nav-item">
+          <a class="nav-link" href="/about">소개</a>
+        </li>{% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
