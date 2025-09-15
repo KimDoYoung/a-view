@@ -1070,7 +1070,7 @@ async def convert_with_libreoffice_async(input_path: Path, html_path: Path) -> P
     """
     LibreOffice를 사용한 비동기 변환
     """
-    CONVERTED_DIR = html_path.parent
+    CONVERTED_DIR = Path(settings.CONVERTED_DIR)
     
     # LibreOffice 실행 파일 찾기
     libre_office = find_soffice()

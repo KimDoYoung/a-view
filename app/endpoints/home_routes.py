@@ -176,7 +176,7 @@ async def view_document(
         auto_output = params.auto_output_format
         
         if params.is_url_source:
-            logger.info(f"URL에서 다운로드 및 변환: {params.url} -> {auto_output.value}")
+            logger.info(f"URL에서 다운로드 및 보기: {params.url} -> {auto_output.value}")
             converted_url = await url_download_and_view(request, params.url, auto_output)
             
             # URL에서 원본 파일명 추출
