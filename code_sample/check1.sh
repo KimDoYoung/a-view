@@ -7,6 +7,18 @@ start_time=$(date +%s)
 
 BASE_URL="http://localhost:8003"
 SAMPLE_PATH="c:/tmp/aview/files"
+TENP_DIR="c:/tmp/aview/temp"
+
+# 임시 디렉토리 생성
+if [ ! -d "$TENP_DIR" ]; then
+    echo "Creating temporary directory: $TENP_DIR"
+    mkdir -p "$TENP_DIR"
+fi
+# 임시 디렉토리 내 모든 파일 삭제
+if [ -d "$TENP_DIR" ]; then
+    echo "Cleaning temporary directory: $TENP_DIR"
+    rm -f "$TENP_DIR"/*
+fi
 
 # 색깔 출력을 위한 함수
 print_section() {
@@ -211,8 +223,7 @@ cache_stats() {
     # JSON 응답을 파일로 저장
     if [[ "$cache_stats_http_code" == "200" && -n "$cache_stats_body" ]]; then
         cache_stats_file="cache_stats_$(date +%Y%m%d_%H%M%S).json"
-        echo "$cache_stats_body" > "$cache_stats_file"
-        echo "Cache stats saved to: $cache_stats_file"
+        echo "Cache stats saved to: $cache_stats_body"
     fi
 }
 
