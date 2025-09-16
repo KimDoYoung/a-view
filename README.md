@@ -1,4 +1,4 @@
-# a-view
+# a-view (document viewer for AssetERP)
 
 ## 개요
 
@@ -45,6 +45,19 @@
 |---------|-------------------------------------|------------|-----------|
 | convert | 오피스파일                          | 사용자지정 | JSON      |
 | view    | 오피스파일 외 이미지, Markdown, CSV, Text 등 | 대상에 따라 자동 | Web Page |
+
+4. 기타 API
+
+   1. 통계
+      1. /stats/system-status
+      2. /stats/dashboard
+      3. /stats/daily/{date}
+      4. /stats/export
+   2. 캐쉬
+      1. /cache/cleanup
+      2. /cache/stats
+      3. /cache/clear-all
+      4. /cache/file
 
 ### API convert
 

@@ -71,9 +71,12 @@ signal.signal(signal.SIGTERM, signal_handler)  # 종료 신호
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="A-View Document Viewer for AssetERP",
+        title="A-View",
         description="Document viewer for AssetERP",
         version=settings.VERSION,
+        docs_url="/docs" if settings.DEBUG else None,
+        redoc_url="/redoc" if settings.DEBUG else None,
+        openapi_url="/openapi.json" if settings.DEBUG else None,
     )
     add_routes(app)
     add_statics(app)
