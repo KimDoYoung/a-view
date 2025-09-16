@@ -20,7 +20,7 @@ from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse, FileResponse
 from typing import Optional
 from pathlib import Path
-
+from urllib.parse import urlparse, unquote
 from app.core.view_lib import local_file_copy_and_view, url_download_and_view
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat, ViewParams
 from app.core.utils import check_libreoffice, get_redis, get_templates
@@ -179,10 +179,10 @@ async def view_document(
             logger.info(f"URL에서 다운로드 및 보기: {params.url} -> {auto_output.value}")
             converted_url = await url_download_and_view(request, params.url, auto_output)
             
-            # URL에서 원본 파일명 추출
-            from urllib.parse import urlparse
+            # URL에서 원본 파일명 추출 및 디코딩
+            
             parsed_url = urlparse(params.url)
-            original_filename = Path(parsed_url.path).name
+            original_filename = unquote(Path(parsed_url.path).name, encoding='utf-8')
             
             templates = get_templates(request)
             context = {
@@ -203,6 +203,7 @@ async def view_document(
             
             # 로컬 파일에서 원본 파일명 추출
             original_filename = Path(params.path).name
+            original_filename = unquote(original_filename, encoding='utf-8')
             
             templates = get_templates(request)
             context = {
@@ -361,9 +362,9 @@ async def download_original_file(
                 
                 # 파일명 결정
                 if not filename:
-                    from urllib.parse import urlparse
+                    from urllib.parse import urlparse, unquote
                     parsed_url = urlparse(url)
-                    filename = Path(parsed_url.path).name or "download_file"
+                    filename = unquote(Path(parsed_url.path).name, encoding='utf-8') or "download_file"
                 
                 logger.info(f"URL에서 원본 파일 다운로드: {filename}")
                 
