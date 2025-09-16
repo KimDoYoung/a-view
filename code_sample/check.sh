@@ -288,7 +288,7 @@ call_convert_api "${BASE_URL}/aview/files/${first_office_file}" "url" "pdf"
 call_convert_api "${BASE_URL}/aview/files/${first_office_file}" "url" "html"
 cache_stats
 
-pause
+# pause
 # View API 테스트
 print_section "5. View API 테스트"
 for file in "${view_files[@]}"; do

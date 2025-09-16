@@ -161,3 +161,6 @@ http://a-view-host:8003/aview?url=http://asset-erp-user-host:8003/static/files/A
    - 리팩토링 후 수행해서 결과를 확인한다.
    - 에러에 대한 결과는 확인할 수 없다.
    - 준비된 파일들이 필요하다.
+
+2. code_sample/error.sh
+    - convert를 호출할 수 없는 파일타입들 체크
