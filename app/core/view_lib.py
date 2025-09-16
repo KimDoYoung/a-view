@@ -594,49 +594,49 @@ def view_basic_md_to_html(md_path: Path, html_path: Path, original_filename: str
         )
 
 
-async def view_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename: str = None) -> Path:
-    """
-    LibreOffice를 사용해 파일을 HTML로 변환 (비동기)
-    특정 파일 타입은 전용 변환 함수 사용 (한글 인코딩 문제 해결)
-    Returns: 변환된 HTML 파일 경로
-    """
-    import asyncio
+# async def view_to_html(input_path: Path, CONVERTED_DIR: Path, original_filename: str = None) -> Path:
+#     """
+#     LibreOffice를 사용해 파일을 HTML로 변환 (비동기)
+#     특정 파일 타입은 전용 변환 함수 사용 (한글 인코딩 문제 해결)
+#     Returns: 변환된 HTML 파일 경로
+#     """
+#     import asyncio
     
-    # 이미 HTML인 경우 그대로 반환
-    if input_path.suffix.lower() in {'.html', '.htm'}:
-        return input_path
+#     # 이미 HTML인 경우 그대로 반환
+#     if input_path.suffix.lower() in {'.html', '.htm'}:
+#         return input_path
     
-    # 변환된 파일 경로
-    html_filename = f"{input_path.stem}.html"
-    html_path = CONVERTED_DIR / html_filename
+#     # 변환된 파일 경로
+#     html_filename = f"{input_path.stem}.html"
+#     html_path = CONVERTED_DIR / html_filename
     
-    # 이미 변환된 파일이 있으면 반환
-    if html_path.exists():
-        return html_path
+#     # 이미 변환된 파일이 있으면 반환
+#     if html_path.exists():
+#         return html_path
     
-    # 파일 타입별 전용 변환 함수 사용 (이들은 동기이므로 executor 사용)
-    if input_path.suffix.lower() == '.csv':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, view_csv_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() == '.txt':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, view_txt_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() in {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}:
-        return await asyncio.get_event_loop().run_in_executor(
-            None, view_image_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() == '.md':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, view_md_to_html, input_path, html_path, original_filename
-        )
-    elif input_path.suffix.lower() == '.pdf':
-        return await asyncio.get_event_loop().run_in_executor(
-            None, view_pdf_to_html, input_path, html_path, original_filename
-        )
-    else:
-        raise RuntimeError("지원하지 않는 파일 형식입니다")
+#     # 파일 타입별 전용 변환 함수 사용 (이들은 동기이므로 executor 사용)
+#     if input_path.suffix.lower() == '.csv':
+#         return await asyncio.get_event_loop().run_in_executor(
+#             None, view_csv_to_html, input_path, html_path, original_filename
+#         )
+#     elif input_path.suffix.lower() == '.txt':
+#         return await asyncio.get_event_loop().run_in_executor(
+#             None, view_txt_to_html, input_path, html_path, original_filename
+#         )
+#     elif input_path.suffix.lower() in {'.jpg', '.jpeg', '.png', '.gif', '.bmp'}:
+#         return await asyncio.get_event_loop().run_in_executor(
+#             None, view_image_to_html, input_path, html_path, original_filename
+#         )
+#     elif input_path.suffix.lower() == '.md':
+#         return await asyncio.get_event_loop().run_in_executor(
+#             None, view_md_to_html, input_path, html_path, original_filename
+#         )
+#     elif input_path.suffix.lower() == '.pdf':
+#         return await asyncio.get_event_loop().run_in_executor(
+#             None, view_pdf_to_html, input_path, html_path, original_filename
+#         )
+#     else:
+#         raise RuntimeError("지원하지 않는 파일 형식입니다")
 
 
 async def local_file_copy_and_view(request: Request, path: str, output_format: str) -> str:
@@ -652,7 +652,8 @@ async def local_file_copy_and_view(request: Request, path: str, output_format: s
     output_path = await convert_to_html(request, file_path, original_filename)
 
     logger.info(f"path :{path} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/html/{output_path.name}"
+    # url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
     logger.info(f"변환된 파일 URL: {url}")
     # 통계 DB에 기록
     end_time = time.time()
@@ -681,7 +682,8 @@ async def url_download_and_view(request: Request, url: str, output_format: str) 
     output_path = await convert_to_html(request, file_path, original_filename)
     
     logger.info(f"url :{url} 에서 다운로드, 원래파일명:{original_filename},  변환된 파일 {output_path}로 저장")
-    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    # url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/{output_format.lower()}/{output_path.name}"
+    url = f"{settings.PROTOCOL}://{settings.HOST}:{settings.PORT}/aview/html/{output_path.name}"
     logger.info(f"변환된 파일 URL: {url}")
     end_time = time.time()
     conversion_time = end_time - start_time 

@@ -136,7 +136,7 @@
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select" x-model="filterLevel" @change="filterLogs">
+                                <select aria-label="로그 레벨 필터" class="form-select" x-model="filterLevel" @change="filterLogs">
                                     <option value="">모든 레벨</option>
                                     <option value="ERROR">ERROR</option>
                                     <option value="WARNING">WARNING</option>
@@ -145,7 +145,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select" x-model="displayLines" @change="changeDisplayLines">
+                                <select aria-label="표시 줄 수 선택" class="form-select" x-model="displayLines" @change="changeDisplayLines">
                                     <option value="100">100줄</option>
                                     <option value="500">500줄</option>
                                     <option value="1000">1000줄</option>

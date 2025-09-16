@@ -401,8 +401,14 @@ async def convert_to_html(request: Request, input_file_path: str, original_filen
     # HTML 경로의 확장자를 PDF로 변경
     pdf_path = html_path.with_suffix('.pdf')
     converted_path =  await convert_with_libreoffice_async(input_path, pdf_path)
+    # 여기서 리턴하면 이것은 pdf
     logger.info(f"오피스문서 Libre로 변환된 pdf: {converted_path}")
-    return converted_path
+    logger.info(f"HTML 경로: {html_path}, PDF 경로: {pdf_path}, 변환된 경로: {converted_path}, original_filename: {original_filename}")
+    # html을 리턴한다.
+    return await asyncio.get_event_loop().run_in_executor(
+        None, convert_pdf_to_html, converted_path, html_path, original_filename
+    )
+    # return converted_path
 
 def convert_pdf_to_html(pdf_path: Path, html_path: Path, original_filename:str = None)->Path:
     '''

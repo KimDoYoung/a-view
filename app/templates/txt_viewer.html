@@ -53,7 +53,10 @@
             color: #6c757d;
             text-align: right;
             margin-right: 10px;
-            user-select: none;
+            -webkit-user-select: none; /* Safari, iOS Safari 지원 */
+            -moz-user-select: none;    /* 구형 Firefox 지원 */
+            -ms-user-select: none;     /* 구형 IE/Edge 지원 */
+            user-select: none;         /* 최신 표준 */
             border-right: 1px solid #dee2e6;
             padding-right: 8px;
         }

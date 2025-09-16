@@ -187,7 +187,7 @@ async def view_document(
             templates = get_templates(request)
             context = {
                 "request": request,
-                "title": "문서 뷰어",
+                "title": f"문서 뷰어-{original_filename}",
                 "converted_url": converted_url,
                 "original_source": params.url,
                 "original_filename": original_filename,
@@ -207,7 +207,7 @@ async def view_document(
             templates = get_templates(request)
             context = {
                 "request": request,
-                "title": "문서 뷰어",
+                "title": f"문서 뷰어-{original_filename}",
                 "converted_url": converted_url,
                 "original_source": params.path,
                 "original_filename": original_filename,
