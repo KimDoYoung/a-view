@@ -2,7 +2,7 @@
 
 ## 개요
 
-- [AssetERP](http://www.k-fs.co.kr/product2.do)에서는 구글의 gview를 이용해서 excel, word, powerpoint 파일을 보여주었는데, 구글이 더 이상 gview서비스를 원활히 지원하지 않아서 
+- [AssetERP](http://www.k-fs.co.kr/product2.do)에서는 구글의 gview를 이용해서 excel, word, powerpoint 파일을 보여주었는데, 구글이 더 이상 gview서비스를 원활히 지원하지 않아서
 자체적으로 개발하기로 하였습니다.
 - 2가지 방식을 고려했는데, excel, word, powerpoint를 해석하는 1)**개별 파이썬 라이브러리를 사용하여 변환하는 방식**과 2)**libreoffice 라이브러리를 사용하는 방식**임
 - 본 프로젝트는 libreoffice 라이브러리를 사용하여 개발하기로 하였습니다.
@@ -10,12 +10,14 @@
 ## 설계
 
 ### dashboard제공
+
 - index.html에 dashboard 기능제공
 - 시스템상태 확인
 - 통계 확인
 - 캐쉬 상태 및 관리 기능 제공
 
 ### 자체적인 테스트 기능
+
 - 타 시스템과연계되지 않고 자체적으로 파일을 업로드한 후에 테스트 가능하도록 기능 및 UI제공
 - 타 시스템이 URL을 입력하여 테스트할 수 있도록 함
 
@@ -54,6 +56,7 @@
     1. json 형태로 제공됨
     2. success, url, message가 제공됨
 4. example
+
    ```bash
     # 성공시
     curl "http://a-view-host:8003/convert?path=c:\\tmp\\sample\\11.docx&output=pdf"
@@ -80,7 +83,6 @@
 | 이미지파일들(.jpg, .png)             | HTML        |
 | Markdown(.md)                     | HTML        |
 
-
 ## 배포
 
 - docker를 사용하여 배포
@@ -89,6 +91,7 @@
 - 리눅스 테스트 서버에 사용자 aview를 생성, 홈 디렉토리는 /data1/aview 임
 - 운영 리눅스에는 SSL파일을 .env.real에 기술하여야함.
 - 기본명령어들
+
 ```bash
 docker compose -f docker-compose.local.yml build
 # 기동
@@ -101,6 +104,7 @@ docker compose -f docker-compose.local.yml logs -f aview
 
 - docker명령어를 모아서 deploy.sh을 작성함.
 - 사용법
+
 ```bash
 # 기본 사용
 ./deploy.sh # 도움말을 볼 수 있음
@@ -116,7 +120,6 @@ docker compose -f docker-compose.local.yml logs -f aview
 ./deploy.sh clean-all local --dry-run   # 삭제할 명령어들 출력
 ```
 
-
 ## 설정
 
 - 환경설정 `A_VIEW_MODE` 의 값이 development | production 인지에 따라서.
@@ -124,8 +127,9 @@ docker compose -f docker-compose.local.yml logs -f aview
 
 ## 방식
 
-- AssetERP에서 ifram 으로 **http://g-view-host:8003/view?url=https://.../abc.xlsx** 호출
+- AssetERP에서 ifram 으로 **<http://g-view-host:8003/view?url=https://.../abc.xlsx>** 호출
 - 사용방법
+
 ```text
 a-view는 assertERP 시스템에서 호출한다. 즉 AssetERP에서   localhost:8003/aview?url=https://asserterp-host/files/a.xlsx와 같이 호출한다. 그러면 localhost:8003(a-view)에서 그 파일을 다운로드해서 libre를 이용하여 변환한 후에 보여줘야한다. 이것을 테스트하기 위해서 나는 AssetERP(자바베이스의 web application)을 대신하는 web-application을 만들 필요가 있는가? 아니면 그냥 a-view로 그것을 갈음하여 테스트 가능한가?
 ```
@@ -137,11 +141,12 @@ http://a-view-host:8003/aview?url=http://asset-erp-user-host:8003/static/files/A
 ## 설치
 
 1. [radis](https://redis.io/)를 cache 용으로 사용함.
-2. [libreoffice](https://www.libreoffice.org/) 를 다운해서 설치 
+2. [libreoffice](https://www.libreoffice.org/) 를 다운해서 설치
 
 ## redis
 
 - docker에서 실행
+
   ```bash
   docker ps
   docker stop redis-aview
@@ -150,3 +155,9 @@ http://a-view-host:8003/aview?url=http://asset-erp-user-host:8003/static/files/A
   docker run -d --name redis-aview -p 6379:6379 redis:latest
   ```
 
+## 테스트
+
+1. code_sample의 check.sh
+   - 리팩토링 후 수행해서 결과를 확인한다.
+   - 에러에 대한 결과는 확인할 수 없다.
+   - 준비된 파일들이 필요하다.
