@@ -442,7 +442,7 @@ async def serve_image(request: Request, path: str = Query(..., description="이�
             logger.error(f"이미지 파일이 아닙니다: {image_path}, MIME: {mime_type}")
             return HTMLResponse(content="<h3>이미지 파일이 아닙니다</h3>", status_code=400)
         
-        logger.info(f"이미지 서빙: {image_path}, MIME: {mime_type}")
+        logger.info(f"이미지 서빙(/image): {image_path}, MIME: {mime_type}")
         
         return FileResponse(
             path=image_path,
