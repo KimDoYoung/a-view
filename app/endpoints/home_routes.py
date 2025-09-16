@@ -17,10 +17,14 @@
 버전: 1.0
 """
 from fastapi import APIRouter, Request, Query
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, Response
 from typing import Optional
 from pathlib import Path
 from urllib.parse import urlparse, unquote
+import httpx
+from pathlib import Path
+import mimetypes
+
 from app.core.view_lib import local_file_copy_and_view, url_download_and_view
 from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat, ViewParams
 from app.core.utils import check_libreoffice, get_redis, get_templates
@@ -353,23 +357,19 @@ async def download_original_file(
     try:
         if url:
             # URL에서 원본 파일 다운로드
-            logger.info(f"원본 URL 다운로드 요청: {url}")
-            
-            import httpx
+            logger.info(f"원본 URL 다운로드 요청: {url}")            
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(url)
                 response.raise_for_status()
                 
                 # 파일명 결정
                 if not filename:
-                    from urllib.parse import urlparse, unquote
                     parsed_url = urlparse(url)
                     filename = unquote(Path(parsed_url.path).name, encoding='utf-8') or "download_file"
                 
                 logger.info(f"URL에서 원본 파일 다운로드: {filename}")
                 
                 # 직접 파일 내용을 Response로 반환
-                from fastapi.responses import Response
                 return Response(
                     content=response.content,
                     media_type='application/octet-stream',
@@ -418,10 +418,7 @@ async def serve_image(request: Request, path: str = Query(..., description="이�
     이미지 파일 서빙 API
     이미지 뷰어에서 실제 이미지를 표시하기 위한 엔드포인트
     """
-    try:
-        from pathlib import Path
-        import mimetypes
-        
+    try:        
         # 경로 정규화
         image_path = Path(path)
         
