@@ -41,10 +41,10 @@
 2. convert는 오피스 파일들(excel, words, powerpoint)를 대상으로 pdf또는 html로 변환한 후 변환된 url을 제공한다.
 3. view는 오피스 파일들을 포함한 다양한 파일 포맷을 대상으로 pdf또는 html등으로 변환한 후 보기기능을 지원하는 웹페이지를 제공한다.
 
-| API     | 대상                                | 변환방식   | 제공방식  |
-|---------|-------------------------------------|------------|-----------|
-| convert | 오피스파일                          | 사용자지정 | JSON      |
-| view    | 오피스파일 외 이미지, Markdown, CSV, Text 등 | 대상에 따라 자동 | Web Page |
+    | API     | 대상                                | 변환방식   | 제공방식  |
+    |---------|-------------------------------------|------------|-----------|
+    | convert | 오피스파일                          | 사용자지정 | JSON      |
+    | view    | 오피스파일 외 이미지, Markdown, CSV, Text 등 | 대상에 따라 자동 | Web Page |
 
 4. 기타 API
 
@@ -61,14 +61,16 @@
 
 ### API convert
 
-1. get, post 지원
-2. param
+1. 요청한 파일을 pdf 또는 html로 변환한 후 접근할 수 있는 url을 포함하는 json을 리턴한다.
+2. get, post 지원
+3. 오피스파일에 대해서만 지원
+4. param
    1. url or path  : url로 파일을 지정, path는 동일 서버에 사용자 웹서비스와 a-view서비스가 존재하고 물리적 disk를 공유시 사용가능
    2. output : pdf또는 html을 지정할 수 있음.
-3. response
+5. response
     1. json 형태로 제공됨
     2. success, url, message가 제공됨
-4. example
+6. example
 
    ```bash
     # 성공시
@@ -83,10 +85,11 @@
 
 ### API view
 
-1. get방식만 제공
-2. param : url or path  : url로 파일을 지정, path는 동일 서버에 사용자 웹서비스와 a-view서비스가 존재하고 물리적 disk를 공유시 사용가능
-3. response : 웹페이지
-4. param에 따라서 자동으로 output을 제공
+1. 요청받은 파일을 브라우징할 수 있는 html을 제공한다.
+2. get방식만 제공한다.
+3. param : url or path  : url로 파일을 지정, path는 동일 서버에 사용자 웹서비스와 a-view서비스가 존재하고 물리적 disk를 공유시 사용가능
+4. response : 웹페이지
+5. param에 따라서 자동으로 output을 제공
 
 | 대상                         | Output 포맷 |
 |------------------------------|-------------|
@@ -103,15 +106,16 @@
 - 개발(윈도우)에도 docker가 설치되어 있음.
 - 리눅스 테스트 서버에 사용자 aview를 생성, 홈 디렉토리는 /data1/aview 임
 - 운영 리눅스에는 SSL파일을 .env.real에 기술하여야함.
+
 - 기본명령어들
 
-```bash
-docker compose -f docker-compose.local.yml build
-# 기동
-docker compose -f docker-compose.local.yml up -d
-# 로그
-docker compose -f docker-compose.local.yml logs -f aview
-```
+    ```bash
+    docker compose -f docker-compose.local.yml build
+    # 기동
+    docker compose -f docker-compose.local.yml up -d
+    # 로그
+    docker compose -f docker-compose.local.yml logs -f aview
+    ```
 
 ### deploy.sh을 통한 docker 배포
 

@@ -5,6 +5,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     TZ=Asia/Seoul
 
+# uv 설치 (공식 스크립트)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# uv 기본 설치 위치를 PATH에 추가
+ENV PATH="/root/.local/bin:${PATH}"    
+
 # 필수 패키지와 LibreOffice 설치
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # LibreOffice 관련
@@ -24,23 +29,19 @@ RUN sed -i 's/# *ko_KR.UTF-8 UTF-8/ko_KR.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen
 ENV LANG=ko_KR.UTF-8 LC_ALL=ko_KR.UTF-8
 
-# UV PATH 설정
-ENV PATH="/root/.cargo/bin:$PATH"
-
 WORKDIR /aview
 
 # Python 의존성 설치
-COPY pyproject.toml uv.lock* requirements.txt* ./
-RUN if [ -f pyproject.toml ]; then uv sync --frozen --no-dev --no-cache; \
-    elif [ -f requirements.txt ]; then uv pip install --system -r requirements.txt --no-cache-dir; fi
+COPY pyproject.toml uv.lock*  ./
+RUN uv export --frozen --no-dev --format requirements-txt > /tmp/req.txt && \
+    uv pip install --system -r /tmp/req.txt --no-cache-dir
 
 # 애플리케이션 코드 복사
 COPY . .
+RUN rm -f .env.test .env.real
 
 EXPOSE 8003
 ENV AVIEW_MODE=local
-ENV VIRTUAL_ENV=/aview/.venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV PYTHONPATH=/aview
 
 CMD ["python", "-m", "app.main"]

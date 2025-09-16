@@ -17,7 +17,7 @@ ENV LANG=ko_KR.UTF-8 LC_ALL=ko_KR.UTF-8
 
 WORKDIR /aview
 
-COPY pyproject.toml uv.lock* requirements.txt* ./
+COPY pyproject.toml uv.lock*  ./
 RUN if [ -f pyproject.toml ]; then uv sync --frozen --no-dev; \
     elif [ -f requirements.txt ]; then uv pip install --system -r requirements.txt; fi
 

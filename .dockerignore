@@ -68,3 +68,4 @@ test_*.py
 # Documentation
 docs/
 *.md
+doc/
