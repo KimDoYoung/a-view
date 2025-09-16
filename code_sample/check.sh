@@ -141,20 +141,22 @@ call_convert_api() {
         echo "Preview: ${body:0:100}..."
     else
         echo "Response: $body"
-    fi
+    fi  
     # Response body를 temp 파일로 저장
-    if [[ "$param_type" == "path" ]] || [[ "$param_type" == "url" ]]; then
-        local safe_filename=$(echo "$filename" | sed 's/[^a-zA-Z0-9._-]/_/g')
-        local temp_file="${TENP_DIR}/${safe_filename}_${param_type}_${output_format}.json"
-        echo "$body" > "$temp_file"
-        echo "Response saved to: $temp_file"
-    fi
+    # $body에 "success":true 가 포함되어 있지 않으면 실패로 간주
     if [[ "$http_code" != "200" ]]; then
         echo "❌ API 호출 실패 (HTTP $http_code)"
         echo "요청 URL: $url"
         echo "응답 내용: $body"
         exit 1
     fi
+    if [[ "$body" != *'"success":true'* ]]; then
+        echo "❌ 변환 실패 (응답에 success:true 없음)"
+        echo "요청 URL: $url"
+        echo "응답 내용: $body"
+        exit 1
+    fi
+    # Response body를 temp 파일로 저장
 }
 
 # Cache 상태 확인 함수
@@ -198,12 +200,14 @@ call_view_api() {
 
     echo "HTTP Code: $http_code"
     echo "Response Time: ${time_total}s"
-    if [[ "$body" == *"<html"* ]] || [[ "$body" == *"<!DOCTYPE"* ]]; then
-        echo "Response: [HTML Content - ${#body} bytes]"
-        echo "Preview: ${body:0:100}..."
-    else
-        echo "Response: $body"
-    fi
+    
+    # $body.를 temp_dir 하위에 저장
+    # HTML 파일로 저장
+    local timestamp=$(date +"%Y_%m_%d_%H_%M_%S")
+    local output_file="${TENP_DIR}/${timestamp}.html"
+    echo "$body" > "$output_file"
+    echo "Response saved to: $output_file"
+
 
     if [[ "$http_code" != "200" ]]; then
         echo "❌ View API 호출 실패 (HTTP $http_code)"
@@ -274,7 +278,7 @@ for file in "${office_files[@]}"; do
     call_convert_api "${BASE_URL}/aview/files/${file}" "url" "pdf"
     call_convert_api "${BASE_URL}/aview/files/${file}" "url" "html"
 done
-pause
+
 # Cache 효과 확인
 print_section "4. Cache 효과 확인"
 first_office_file="${office_files[0]}"
@@ -284,6 +288,7 @@ call_convert_api "${BASE_URL}/aview/files/${first_office_file}" "url" "pdf"
 call_convert_api "${BASE_URL}/aview/files/${first_office_file}" "url" "html"
 cache_stats
 
+pause
 # View API 테스트
 print_section "5. View API 테스트"
 for file in "${view_files[@]}"; do
