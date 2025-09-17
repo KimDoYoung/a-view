@@ -157,7 +157,20 @@
             font-size: 16px;
             max-width: 100%;
         }
-        
+        .ph-filename {
+            font-size: 12px;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+        .ph-path {
+            font-size: 10px;
+            margin-top: 5px;
+            word-break: break-all;
+            color: #6c757d;
+        }
+        .ph-error {
+            color: #dc3545;
+        }        
         /* 반응형 */
         @media (max-width: 768px) {
             .image-header {
@@ -187,8 +200,8 @@
         <div class="image-viewer">
             <div class="placeholder-image" id="image-placeholder">
                 <div>📁 이미지 로딩 중...</div>
-                <div style="font-size: 12px; margin-top: 10px;">{{ filename }}</div>
-                <div style="font-size: 10px; margin-top: 5px; word-break: break-all;">{{ image_path }}</div>
+                <div class="ph-filename">{{ filename }}</div>
+                <div class="ph-path">{{ image_path }}</div>
             </div>
             <img id="image" src="" alt="{{ filename }}" style="display: none;" data-original="{{ image_path }}">
         </div>

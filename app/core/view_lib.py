@@ -173,10 +173,6 @@ def view_csv_to_html(csv_path: Path, html_path: Path, original_filename: str = N
         # CSV 파일 읽기
         csv_data = []
         headers = []
-        
-        with open(csv_path, 'r', encoding='utf-8') as f:
-            # CSV 내용을 먼저 읽어서 인코딩 문제 체크
-            content = f.read()
             
         # UTF-8로 읽기 시도, 실패시 cp949로 재시도
         encodings = ['utf-8', 'cp949', 'euc-kr', 'latin-1']
