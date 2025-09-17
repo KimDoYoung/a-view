@@ -110,6 +110,9 @@
 - 기본명령어들
 
     ```bash
+    # redis wsl docker 설치
+    docker run -d --name redis-container -p 6379:6379 redis
+
     docker compose -f docker-compose.local.yml build
     # 기동
     docker compose -f docker-compose.local.yml up -d
