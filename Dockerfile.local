@@ -38,6 +38,7 @@ RUN uv export --frozen --no-dev --format requirements-txt > /tmp/req.txt && \
 
 # 애플리케이션 코드 복사
 COPY . .
+# 불필요한 설정삭제
 RUN rm -f .env.test .env.real
 
 EXPOSE 8003

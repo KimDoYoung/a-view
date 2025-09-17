@@ -38,10 +38,10 @@ RUN uv export --frozen --no-dev --format requirements-txt > /tmp/req.txt && \
 
 # 애플리케이션 코드 복사
 COPY . .
-RUN rm -f .env.test .env.real
+RUN rm -f .env.local .env.real
 
 EXPOSE 8003
-ENV AVIEW_MODE=local
+ENV AVIEW_MODE=test
 ENV PYTHONPATH=/aview
 
 CMD ["python", "-m", "app.main"]

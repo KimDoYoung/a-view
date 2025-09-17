@@ -1,28 +1,48 @@
 # syntax=docker/dockerfile:1
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm
+FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     TZ=Asia/Seoul
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libreoffice libreoffice-writer libreoffice-calc libreoffice-impress \
-    fonts-noto-cjk fonts-noto-cjk-extra fonts-noto-color-emoji \
-    locales ca-certificates curl && \
-    rm -rf /var/lib/apt/lists/*
+# uv 설치 (공식 스크립트)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# uv 기본 설치 위치를 PATH에 추가
+ENV PATH="/root/.local/bin:${PATH}"    
 
+# 필수 패키지와 LibreOffice 설치
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # LibreOffice 관련
+    libreoffice-core libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \
+    # 한글 폰트 (최소한으로)
+    fonts-noto-cjk-extra \
+    # 기타 필수
+    locales ca-certificates curl \
+    # UV 설치를 위한 임시 패키지
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    # 정리
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# 한글 로케일 설정
 RUN sed -i 's/# *ko_KR.UTF-8 UTF-8/ko_KR.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen
 ENV LANG=ko_KR.UTF-8 LC_ALL=ko_KR.UTF-8
 
 WORKDIR /aview
 
+# Python 의존성 설치
 COPY pyproject.toml uv.lock*  ./
-RUN if [ -f pyproject.toml ]; then uv sync --frozen --no-dev; \
-    elif [ -f requirements.txt ]; then uv pip install --system -r requirements.txt; fi
+RUN uv export --frozen --no-dev --format requirements-txt > /tmp/req.txt && \
+    uv pip install --system -r /tmp/req.txt --no-cache-dir
 
+# 애플리케이션 코드 복사
 COPY . .
+# 불필요한 설정삭제
+RUN rm -f .env.test .env.local
 
 EXPOSE 8003
 ENV AVIEW_MODE=real
+ENV PYTHONPATH=/aview
+
 CMD ["python", "-m", "app.main"]
