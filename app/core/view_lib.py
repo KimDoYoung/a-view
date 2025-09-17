@@ -5,9 +5,9 @@ View Library
 """
 
 import csv
+import time
 from io import StringIO
 from pathlib import Path
-import time
 from typing import Tuple
 
 import redis
@@ -16,8 +16,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.core.config import Config, settings
 from app.core.logger import get_logger
-from app.core.utils import copy_and_cache_file, download_and_cache_file
-from doc.utils import convert_to_html
+from app.core.utils import convert_to_html, copy_and_cache_file, download_and_cache_file
 
 logger = get_logger(__name__)
 
@@ -27,7 +26,10 @@ async def get_cached_pdf(redis_client: redis.Redis, url: str, settings: Config) 
     URL에서 PDF 파일을 가져와서 캐시에 저장
     Returns: (PDF_파일_경로, 원본_파일명)
     """
-    from app.core.convert_lib import download_and_cache_file, convert_to_pdf  # 순환 import 방지
+    from app.core.convert_lib import (  # 순환 import 방지
+        convert_to_pdf,
+        download_and_cache_file,
+    )
     
     # 파일 다운로드 또는 캐시에서 가져오기
     cached_path, original_filename, cache_hit = await download_and_cache_file(
