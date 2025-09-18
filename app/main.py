@@ -18,20 +18,16 @@ import redis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+
+from app.core.config import settings
+from app.core.logger import get_logger
 from app.core.stat_scheduler import StatsScheduler
 from app.core.stats_db import StatsDatabase
-from app.core.logger import get_logger
-from app.core.config import settings
-
-from app.endpoints.home_routes import router as home_router
+from app.core.utils import check_libreoffice, cleanup_old_cache_files
 from app.endpoints.aview_routes import router as aview_router
 from app.endpoints.cache_routes import router as cache_router
+from app.endpoints.home_routes import router as home_router
 from app.endpoints.stats_routes import router as stats_router
-
-from app.core.utils import (
-    check_libreoffice,
-    cleanup_old_cache_files
-)
 
 logger = get_logger(__name__)
 
@@ -108,7 +104,7 @@ def startup_event(app: FastAPI):
     """애플리케이션 시작 시 초기화 작업"""
     print("🚀 startup_event 시작!")  # 시작 확인용
     logger.info("------------------------------------------------")
-    logger.info(f"✳️ 시작: {settings.APP_NAME} v{settings.VERSION}")
+    logger.info(f"✳️ 시작: {settings.APP_NAME} v{settings.VERSION} profile: {settings.PROFILE_NAME}")
     logger.info("------------------------------------------------")
     env_summary = get_environment_summary()
     logger.info(f"🔴 실행 위치 : {env_summary}")
