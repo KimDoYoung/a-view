@@ -3,8 +3,9 @@ A-View 설정 클래스
 기존 방식을 사용한 간단한 설정 관리
 """
 
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
 
 
 class Config:
