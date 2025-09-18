@@ -12,7 +12,7 @@ class Config:
     def __init__(self):
         # 환경 구분
         self.PROFILE_NAME = os.getenv('AVIEW_MODE', 'local')
-        load_dotenv(dotenv_path=f'.env.{self.PROFILE_NAME}')
+        load_dotenv(dotenv_path=f'.env.{self.PROFILE_NAME}', override=False)
         
         # 애플리케이션 기본 설정
         self.APP_NAME = os.getenv('APP_NAME', 'A-View Document Viewer')
@@ -38,7 +38,7 @@ class Config:
         self.REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
         
         # 캐시 설정
-        self.BASE_DIR = os.getenv('BASE_DIR', 'C:/tmp/aview' if os.name == 'nt' else '/aview/data')
+        self.BASE_DIR = os.getenv('BASE_DIR', 'C:/tmp/aview' if os.name == 'nt' else '/data1/aview/data')
         self.CACHE_DIR = os.getenv('CACHE_DIR', f'{self.BASE_DIR}/cache')
         self.CONVERTED_DIR = f'{self.CACHE_DIR}/converted'
         self.CACHE_TTL = int(os.getenv('CACHE_TTL', '86400'))  # 24시간
