@@ -150,8 +150,12 @@
 
 ```bash
     tmux ls
+    #실행
     tmux new -s aview_session './a-view/start.sh'
-    tmux 
+    #종료
+    tmux attach -t aview_session
+    ctrl+c, exit
+    tmux kill-session -t aview_session
 ```
 
 ## 설정
