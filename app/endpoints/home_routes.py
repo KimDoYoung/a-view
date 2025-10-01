@@ -69,7 +69,13 @@ async def home(request: Request):
         "redis_status": redis_status,
         "version": settings.VERSION,
     }
-    return templates.TemplateResponse("index.html", context)
+    response = templates.TemplateResponse("index.html", context)
+    # 개발 환경에서 캐시 방지 헤더 추가
+    if settings.DEBUG:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 @router.get("/about", response_class=HTMLResponse)
 async def about(request: Request):

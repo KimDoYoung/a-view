@@ -12,7 +12,7 @@ class Config:
     def __init__(self):
         # 환경 구분
         self.PROFILE_NAME = os.getenv('AVIEW_MODE', 'local')
-        load_dotenv(dotenv_path=f'.env.{self.PROFILE_NAME}', override=False)
+        load_dotenv(dotenv_path=f'.env.{self.PROFILE_NAME}', override=True)
         
         # 애플리케이션 기본 설정
         self.APP_NAME = os.getenv('APP_NAME', 'A-View Document Viewer')
