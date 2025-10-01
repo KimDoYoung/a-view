@@ -160,7 +160,7 @@
 
 ## 설정
 
-- 환경설정 `A_VIEW_MODE` 의 값이 development | production 인지에 따라서.
+- 환경설정 `AVIEW_MODE` 의 값이 development | production 인지에 따라서.
 - .env .env.production 을 반영하여 settings가 설정됨
 
 ## 방식
@@ -176,10 +176,20 @@ a-view는 assertERP 시스템에서 호출한다. 즉 AssetERP에서   localhost
 http://a-view-host:8003/aview?url=http://asset-erp-user-host:8003/static/files/AssetERP/1.xlsx
 ```
 
-## 설치
+## 설치 및 운영환경
+
+- 리눅스 및 윈도우에 설치할 수 있습니다.
 
 1. [radis](https://redis.io/)를 cache 용으로 사용함.
 2. [libreoffice](https://www.libreoffice.org/) 를 다운해서 설치
+3. python 3.12 설치
+4. 방화벽 오픈 8003 (기본 포트)
+5. aview.service파일의 작성 (systemctl의 사용)
+
+- Docker를 이용해서 설치 할 수 있습니다
+
+1. docker compose file 제공
+2. deploy.sh  제공
 
 ## redis
 
