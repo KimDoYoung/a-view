@@ -16,23 +16,32 @@
 작성일: 2025-09-08
 버전: 1.0
 """
-from fastapi import APIRouter, Request, Query
-from fastapi.responses import HTMLResponse, FileResponse, Response
-from typing import Optional
-from pathlib import Path
-from urllib.parse import urlparse, unquote
-import httpx
-from pathlib import Path
 import mimetypes
+from pathlib import Path
+from typing import Optional
+from urllib.parse import unquote, urlparse
 
-from app.core.view_lib import local_file_copy_and_view, url_download_and_view
-from app.domain.schemas import ConvertParams, ConvertRequest, ConvertResponse, OutputFormat, ViewParams
-from app.core.utils import check_libreoffice, get_redis, get_templates
-from app.core.convert_lib import (
-    url_download_and_convert, local_file_copy_and_convert
-)
-from app.core.logger import get_logger
+import httpx
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse, Response
+
 from app.core.config import settings
+from app.core.convert_lib import local_file_copy_and_convert, url_download_and_convert
+from app.core.logger import get_logger
+from app.core.utils import (
+    check_libreoffice,
+    extract_hash_from_url,
+    get_redis,
+    get_templates,
+)
+from app.core.view_lib import local_file_copy_and_view, url_download_and_view
+from app.domain.schemas import (
+    ConvertParams,
+    ConvertRequest,
+    ConvertResponse,
+    OutputFormat,
+    ViewParams,
+)
 
 logger = get_logger(__name__)
 
@@ -182,7 +191,8 @@ async def view_document(
         if params.is_url_source:
             logger.info(f"URL에서 다운로드 및 보기: {params.url} -> {auto_output.value}")
             converted_url = await url_download_and_view(request, params.url, auto_output)
-            
+            hashcode = extract_hash_from_url(converted_url)
+            converted_original_url = f"/aview/{auto_output.value}/{hashcode}.{auto_output.value}"
             # URL에서 원본 파일명 추출 및 디코딩
             
             parsed_url = urlparse(params.url)
@@ -197,7 +207,8 @@ async def view_document(
                 "original_filename": original_filename,
                 "original_url": params.url,  # 원본 다운로드용
                 "source_origin": "url",
-                "output_format": auto_output.value
+                "output_format": auto_output.value,
+                "converted_original_url": converted_original_url,
             }
             template_name = f"view_{auto_output.value}.html"
             return templates.TemplateResponse(template_name, context)

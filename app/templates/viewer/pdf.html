@@ -144,12 +144,12 @@
     <!-- 헤더 토글 버튼 -->
     <button class="toggle-header-btn" id="toggleHeaderBtn" onclick="toggleHeader()" 
             title="헤더 숨기기/보이기" aria-label="헤더 토글">
-        <i class="bi bi-chevron-up"></i>
+        <i class="bi bi-chevron-down"></i>
     </button>
 
     <div class="pdf-container">
         <!-- PDF 정보 헤더 -->
-        <div class="pdf-header">
+        <div class="pdf-header collapsed">
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h4 class="mb-2">
@@ -200,12 +200,6 @@
                             <span class="info-value">{{ pdf_info.author }}</span>
                         </div>
                         {% endif %}
-                        <!-- {% if pdf_info.creator %}
-                        <div class="info-item">
-                            <span class="info-label">생성 프로그램:</span>
-                            <span class="info-value">{{ pdf_info.creator }}</span>
-                        </div>
-                        {% endif %} -->
                     </div>
                 </div>
             </div>

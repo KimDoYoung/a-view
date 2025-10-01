@@ -39,6 +39,17 @@ def get_redis(request):
 def get_templates(request):
     return request.app.state.templates
 
+def extract_hash_from_url(url: str) -> Optional[str]:
+    """
+    URL에서 해시 부분(32자리 16진수)을 추출
+    예: http://localhost:8003/aview/html/7637053a13073e9c554736621d1c2ea1.html
+        -> "7637053a13073e9c554736621d1c2ea1"
+    """
+    match = re.search(r'/([a-f0-9]{32})\.(html|pdf)$', url)
+    if match:
+        return match.group(1)
+    return None
+
 def find_soffice() -> Optional[Path]:
     """
     LibreOffice CLI 실행 파일을 찾는다.
