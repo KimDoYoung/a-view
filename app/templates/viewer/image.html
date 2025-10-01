@@ -194,7 +194,7 @@
 <body>
     <div class="image-container">
         <div class="image-header">
-            <h3 class="image-title">🖼️ {{ filename }} ({{image_filename}})</h3>
+            <h3 class="image-title">🖼️ {{ filename }}</h3>
         </div>
         <!-- 이미지 뷰어 -->
         <div class="image-viewer">
@@ -203,11 +203,11 @@
                 <div class="ph-filename">{{ filename }}</div>
                 <div class="ph-path">{{ image_path }}</div>
             </div>
-            <img id="image" src="" alt="{{ filename }}" style="display: none;" data-original="{{ image_path }}">
+            <img  id="image" src="" alt="{{ filename }}" style="display: none;" data-original="{{ image_path }}">
         </div>
         
         <!-- 이미지 정보 -->
-        <div class="image-info">
+        <div class="image-info" style="display: none;">
             <div class="info-grid">
                 <div class="info-item">
                     <div class="info-label">파일명</div>

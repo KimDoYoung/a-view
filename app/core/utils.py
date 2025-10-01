@@ -23,7 +23,7 @@ from pygments.formatters import HtmlFormatter
 
 from app.core.config import Config, settings
 from app.core.logger import get_logger
-from app.domain.file_ext_definition import SUPPORTED_EXTENSIONS
+from app.domain.file_ext_definition import IMAGE_BASE_EXTENSION, SUPPORTED_EXTENSIONS
 
 logger = get_logger(__name__)
 
@@ -49,6 +49,26 @@ def extract_hash_from_url(url: str) -> Optional[str]:
     if match:
         return match.group(1)
     return None
+
+def is_image_file(filename: str) -> bool:
+    """
+    파일명으로 이미지 파일인지 확인
+    
+    Args:
+        filename: 확인할 파일명
+        
+    Returns:
+        bool: 이미지 파일이면 True, 아니면 False
+    """
+    if not filename:
+        return False
+    
+    try:
+        # 확장자 추출 및 소문자 변환
+        ext = Path(filename).suffix.lower()
+        return ext in IMAGE_BASE_EXTENSION
+    except Exception:
+        return False
 
 def find_soffice() -> Optional[Path]:
     """

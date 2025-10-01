@@ -98,7 +98,8 @@
                 </div>
             </div>
             <div class="d-flex gap-2">
-                <a :href="convertedUrl" target="_blank" class="btn btn-outline-primary btn-sm">
+                <!-- 이미지이면 원래소스 url을 열고, 아니면 변환된 url을 연다 -->
+                <a :href="{% if is_image %}originalSource{% else %}convertedUrl{% endif %}" target="_blank" class="btn btn-outline-primary btn-sm">
                     새 창에서 열기
                 </a>
                 <!-- 원본 파일 다운로드 버튼 -->
@@ -112,9 +113,9 @@
                 </a>
                 {% endif %}
                 <!-- URL인 경우에만 원본 URL 버튼 표시 -->
-                <a x-show="isUrl" :href="originalSource" target="_blank" class="btn btn-outline-info btn-sm">
+                <!-- <a x-show="isUrl" :href="originalSource" target="_blank" class="btn btn-outline-info btn-sm">
                     원본 URL
-                </a>
+                </a> -->
             </div>
         </div>
         

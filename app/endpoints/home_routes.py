@@ -33,6 +33,7 @@ from app.core.utils import (
     extract_hash_from_url,
     get_redis,
     get_templates,
+    is_image_file,
 )
 from app.core.view_lib import local_file_copy_and_view, url_download_and_view
 from app.domain.schemas import (
@@ -189,6 +190,7 @@ async def view_document(
         auto_output = params.auto_output_format
         
         if params.is_url_source:
+            # 소스가 URL일때
             logger.info(f"URL에서 다운로드 및 보기: {params.url} -> {auto_output.value}")
             converted_url = await url_download_and_view(request, params.url, auto_output)
             hashcode = extract_hash_from_url(converted_url)
@@ -197,7 +199,10 @@ async def view_document(
             
             parsed_url = urlparse(params.url)
             original_filename = unquote(Path(parsed_url.path).name, encoding='utf-8')
-            
+            is_image = False
+            if is_image_file(original_filename):
+                is_image = True
+
             templates = get_templates(request)
             context = {
                 "request": request,
@@ -209,6 +214,7 @@ async def view_document(
                 "source_origin": "url",
                 "output_format": auto_output.value,
                 "converted_original_url": converted_original_url,
+                "is_image": is_image
             }
             template_name = f"view_{auto_output.value}.html"
             return templates.TemplateResponse(template_name, context)
