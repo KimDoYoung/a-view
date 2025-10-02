@@ -3,13 +3,21 @@
 # A-View 실행파일 빌드 스크립트
 # 사용법: ./make.sh [옵션]
 # 옵션:
+#   package   - 패키지 형태로 빌드 (기본값)
 #   binary    - PyInstaller로 단일 실행파일 생성
-#   package   - 패키지 형태로 빌드
 #   clean     - 빌드 파일 정리
 #   run       - 개발 서버 실행
 #   test      - 테스트 실행
 
 set -e  # 에러 발생시 즉시 종료
+
+# 리눅스 환경 체크
+if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+    echo "❌ 이 스크립트는 Linux 환경에서만 실행할 수 있습니다."
+    echo "현재 OS: $OSTYPE"
+    echo "💡 Linux 서버에서 실행해주세요."
+    exit 1
+fi
 
 # 색상 정의
 RED='\033[0;31m'
@@ -77,7 +85,7 @@ build_binary() {
     
     pyinstaller \
         --onefile \
-        --name a-view \
+        --name aview \
         --add-data "app/templates:app/templates" \
         --add-data "app/static:app/static" \
         --hidden-import uvicorn.lifespan.on \
@@ -88,15 +96,15 @@ build_binary() {
         --collect-all pydantic \
         app/main.py
     
-    if [ -f "dist/a-view" ]; then
-        log_success "실행파일 생성 완료: dist/a-view"
-        log_info "실행 방법: ./dist/a-view"
+    if [ -f "dist/aview" ]; then
+        log_success "실행파일 생성 완료: dist/aview"
+        log_info "실행 방법: ./dist/aview"
         
         # 실행 권한 부여
-        chmod +x dist/a-view
+        chmod +x dist/aview
         
         # 파일 크기 확인
-        FILE_SIZE=$(du -h dist/a-view | cut -f1)
+        FILE_SIZE=$(du -h dist/aview | cut -f1)
         log_info "실행파일 크기: $FILE_SIZE"
     else
         log_error "실행파일 생성 실패"
@@ -116,7 +124,7 @@ build_package() {
     
     # 패키지 형태로 빌드
     pyinstaller \
-        --name a-view \
+        --name aview \
         --add-data "app/templates:app/templates" \
         --add-data "app/static:app/static" \
         --hidden-import uvicorn.lifespan.on \
@@ -127,12 +135,12 @@ build_package() {
         --collect-all pydantic \
         app/main.py
     
-    if [ -d "dist/a-view" ]; then
-        log_success "패키지 빌드 완료: dist/a-view/"
-        log_info "실행 방법: ./dist/a-view/a-view"
+    if [ -d "dist/aview" ]; then
+        log_success "패키지 빌드 완료: dist/aview/"
+        log_info "실행 방법: ./dist/aview/aview"
         
         # 실행 권한 부여
-        chmod +x dist/a-view/a-view
+        chmod +x dist/aview/aview
     else
         log_error "패키지 빌드 실패"
         exit 1
