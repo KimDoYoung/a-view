@@ -80,6 +80,26 @@ build_binary() {
     # 빌드 디렉토리 정리
     rm -rf build/ dist/ *.spec
     
+    # 런타임 훅 파일 생성
+    cat > runtime_hook.py << 'EOF'
+import sys
+import os
+from pathlib import Path
+
+# PyInstaller 실행 환경에서 모듈 경로 설정
+if getattr(sys, 'frozen', False):
+    # PyInstaller 번들 실행 중
+    bundle_dir = Path(sys._MEIPASS)
+    app_path = bundle_dir / 'app'
+    if app_path.exists() and str(app_path) not in sys.path:
+        sys.path.insert(0, str(app_path.parent))
+    
+    # 현재 실행 디렉토리도 추가
+    current_dir = Path(os.getcwd())
+    if str(current_dir) not in sys.path:
+        sys.path.insert(0, str(current_dir))
+EOF
+    
     # PyInstaller 명령어 실행
     log_info "PyInstaller로 실행파일 생성 중..."
     
@@ -88,13 +108,25 @@ build_binary() {
         --name aview \
         --add-data "app/templates:app/templates" \
         --add-data "app/static:app/static" \
+        --add-data "app:app" \
         --hidden-import uvicorn.lifespan.on \
         --hidden-import uvicorn.loops.auto \
         --hidden-import uvicorn.protocols.websockets.auto \
+        --hidden-import app.core.config \
+        --hidden-import app.core.logger \
+        --hidden-import app.core.utils \
+        --hidden-import app.endpoints.home_routes \
+        --hidden-import app.endpoints.aview_routes \
+        --hidden-import app.endpoints.cache_routes \
         --collect-all fastapi \
         --collect-all jinja2 \
         --collect-all pydantic \
+        --paths . \
+        --runtime-hook runtime_hook.py \
         app/main.py
+    
+    # 런타임 훅 파일 정리
+    rm -f runtime_hook.py
     
     if [ -f "dist/aview" ]; then
         log_success "실행파일 생성 완료: dist/aview"
@@ -122,18 +154,56 @@ build_package() {
     # 빌드 디렉토리 정리
     rm -rf build/ dist/ *.spec
     
+    # 런타임 훅 파일 생성
+    cat > runtime_hook.py << 'EOF'
+import sys
+import os
+from pathlib import Path
+
+# PyInstaller 실행 환경에서 모듈 경로 설정
+if getattr(sys, 'frozen', False):
+    # PyInstaller 번들 실행 중
+    bundle_dir = Path(sys._MEIPASS)
+    app_path = bundle_dir / 'app'
+    if app_path.exists() and str(app_path) not in sys.path:
+        sys.path.insert(0, str(app_path.parent))
+    
+    # 현재 실행 디렉토리도 추가
+    current_dir = Path(os.getcwd())
+    if str(current_dir) not in sys.path:
+        sys.path.insert(0, str(current_dir))
+EOF
+    
     # 패키지 형태로 빌드
     pyinstaller \
         --name aview \
         --add-data "app/templates:app/templates" \
         --add-data "app/static:app/static" \
+        --add-data "app:app" \
         --hidden-import uvicorn.lifespan.on \
         --hidden-import uvicorn.loops.auto \
         --hidden-import uvicorn.protocols.websockets.auto \
+        --hidden-import app.core.config \
+        --hidden-import app.core.logger \
+        --hidden-import app.core.utils \
+        --hidden-import app.core.stats_db \
+        --hidden-import app.core.stat_scheduler \
+        --hidden-import app.core.sys_info \
+        --hidden-import app.endpoints.home_routes \
+        --hidden-import app.endpoints.aview_routes \
+        --hidden-import app.endpoints.cache_routes \
+        --hidden-import app.endpoints.stats_routes \
+        --hidden-import app.domain.schemas \
         --collect-all fastapi \
         --collect-all jinja2 \
         --collect-all pydantic \
+        --collect-all uvicorn \
+        --paths . \
+        --runtime-hook runtime_hook.py \
         app/main.py
+    
+    # 런타임 훅 파일 정리
+    rm -f runtime_hook.py
     
     if [ -d "dist/aview" ]; then
         log_success "패키지 빌드 완료: dist/aview/"
