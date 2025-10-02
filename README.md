@@ -143,6 +143,7 @@
 ### test 서버에 배포
 
 - 248서버, rocky 8.10, soffice 이미 설치되어 있음.
+- 포트 8003 허용해야함.
 - docker설치 허용되지 않음.
 - systemctl을 통한 실행 실패
   - /etc/systemd/system/aview.service 작성 후 실행, 실패
