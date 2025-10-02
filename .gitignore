@@ -46,3 +46,6 @@ temp/
 # 변환된 문서들
 converted/
 *.pdf
+dist/
+build/
+*.spec
