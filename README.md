@@ -185,6 +185,7 @@ http://a-view-host:8003/aview?url=http://asset-erp-user-host:8003/static/files/A
 3. python 3.12 설치
 4. 방화벽 오픈 8003 (기본 포트)
 5. aview.service파일의 작성 (systemctl의 사용)
+6. real에서는 ssl 키를 정의해야 함
 
 - Docker를 이용해서 설치 할 수 있습니다
 
