@@ -5,14 +5,14 @@ A-View 유틸리티 함수들
 - Redis 캐시 작업
 """
 import asyncio
-import time
 import hashlib
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional, Tuple
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote, urlparse
 
 import httpx
 import redis
@@ -24,11 +24,9 @@ try:
 except ImportError:
     AIOFILES_AVAILABLE = False
 
-from app.core.config import settings, Config
+from app.core.config import Config, settings
 from app.core.logger import get_logger
-from app.domain.file_ext_definition import (
-    SUPPORTED_EXTENSIONS
-)
+from app.domain.file_ext_definition import SUPPORTED_EXTENSIONS
 
 logger = get_logger(__name__)
 
@@ -507,8 +505,9 @@ def convert_txt_to_html(txt_path: Path, html_path: Path, original_filename: str 
     Returns: 변환된 HTML 파일 경로
     """
     try:
-        from jinja2 import Environment, FileSystemLoader
         import html
+
+        from jinja2 import Environment, FileSystemLoader
         
         # 여러 인코딩을 시도해서 텍스트 파일 읽기
         encodings = ['utf-8', 'cp949', 'euc-kr', 'utf-8-sig', 'latin-1']
@@ -591,9 +590,10 @@ def convert_image_to_html(image_path: Path, html_path: Path, original_filename: 
     Returns: 변환된 HTML 파일 경로
     """
     try:
+        import os
+
         from jinja2 import Environment, FileSystemLoader
         from PIL import Image
-        import os
         
         # 이미지 정보 추출
         try:
@@ -724,6 +724,7 @@ def convert_md_to_html(md_path: Path, html_path: Path, original_filename: str = 
     """
     try:
         import markdown
+
         # from markdown.extensions import codehilite, tables, toc, fenced_code
         from jinja2 import Environment, FileSystemLoader
         
@@ -862,8 +863,9 @@ def convert_basic_md_to_html(md_path: Path, html_path: Path, original_filename: 
     기본 마크다운 HTML 변환 (markdown 라이브러리 없이)
     """
     try:
-        from jinja2 import Environment, FileSystemLoader
         import html
+
+        from jinja2 import Environment, FileSystemLoader
         
         # 마크다운 파일 읽기
         encodings = ['utf-8', 'cp949', 'euc-kr', 'utf-8-sig', 'latin-1']
@@ -977,9 +979,6 @@ def convert_with_libreoffice(input_path: Path, html_path: Path) -> Path:
         )
 
 
-
-
-
 def cleanup_old_cache_files(max_age_hours: int = 24):
     """오래된 캐시 파일 정리"""
     
@@ -996,3 +995,13 @@ def cleanup_old_cache_files(max_age_hours: int = 24):
                 except Exception:
                     pass  # 파일 삭제 실패 시 무시
 
+    # 변환된 파일 정리
+    converted_dir = Path(settings.CONVERTED_DIR)
+    for converted_file in converted_dir.rglob("*"):
+        if converted_file.is_file():
+            file_age = current_time - converted_file.stat().st_mtime
+            if file_age > max_age_seconds:
+                try:
+                    converted_file.unlink()
+                except Exception:
+                    pass  # 파일 삭제 실패 시 무시
