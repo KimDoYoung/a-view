@@ -84,9 +84,23 @@ def create_app() -> FastAPI:
     return app
 
 def add_statics(app: FastAPI):  
-    # 디렉토리 설정
-    BASE_DIR = Path(__file__).parent
-    STATIC_DIR = BASE_DIR / "static"
+    # PyInstaller 환경 감지
+    if getattr(sys, 'frozen', False):
+        # PyInstaller 번들 실행 중
+        bundle_dir = Path(sys._MEIPASS)
+        STATIC_DIR = bundle_dir / "app" / "static"
+    else:
+        # 개발 환경
+        BASE_DIR = Path(__file__).parent
+        STATIC_DIR = BASE_DIR / "static"
+    
+    # static 디렉토리 존재 확인
+    if not STATIC_DIR.exists():
+        print(f"⚠️  Static 디렉토리가 없습니다: {STATIC_DIR}")
+        # 빈 디렉토리라도 생성해서 오류 방지
+        STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    
+    print(f"📁 Static 디렉토리: {STATIC_DIR}")
     # 정적 파일 마운트
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -129,8 +143,18 @@ def startup_event(app: FastAPI):
 
     # 템플릿 설정
     from fastapi.templating import Jinja2Templates
-    BASE_DIR = Path(__file__).parent
-    TEMPLATE_DIR = BASE_DIR / "templates"
+    
+    # PyInstaller 환경 감지
+    if getattr(sys, 'frozen', False):
+        # PyInstaller 번들 실행 중
+        bundle_dir = Path(sys._MEIPASS)
+        TEMPLATE_DIR = bundle_dir / "app" / "templates"
+    else:
+        # 개발 환경
+        BASE_DIR = Path(__file__).parent
+        TEMPLATE_DIR = BASE_DIR / "templates"
+    
+    print(f"📁 Template 디렉토리: {TEMPLATE_DIR}")
     templates = Jinja2Templates(directory=TEMPLATE_DIR)
     
     # App state에 저장
