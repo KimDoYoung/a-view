@@ -74,4 +74,4 @@ class StatsScheduler:
                 DELETE FROM conversions WHERE created_at < ?
             """, (cutoff_date,)).rowcount
             
-            print(f"🧹 주간 정리: {deleted}개 오래된 로그 삭제")
+            logger.info(f"🧹 주간 정리: {deleted}개 오래된 로그 삭제")

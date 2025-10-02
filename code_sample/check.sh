@@ -33,7 +33,7 @@ check_server_connection() {
         echo "OK: 서버가 정상적으로 응답합니다."
         return 0
     else
-        echo "ERROR: 서버에 연결할 수 없습니다."
+        echo "❌ ERROR: 서버에 연결할 수 없습니다."
         echo "다음을 확인해주세요:"
         echo "  1. 서버 실행 여부"
         echo "  2. 포트 8003 개방 여부"
